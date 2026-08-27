@@ -147,6 +147,37 @@
       opacity: 1;
     }
 
+    /* Banner Promemoria */
+.reminder-banner {
+  display: none; background: #fef3c7; border: 1px solid #f59e0b; border-left: 6px solid #d97706;
+  border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.reminder-banner h3 { margin: 0 0 8px 0; color: #92400e; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.reminder-banner ul { margin: 0; padding-left: 20px; color: #78350f; font-size: 14px; }
+
+/* Form e Tab Agenda */
+.tab-btn.agenda-tab.active { background: #8e44ad; box-shadow: 0 4px 6px rgba(142,68,173,0.3); }
+.agenda-form {
+  background: #fdf4ff; border: 1px solid #f5d0fe; border-left: 5px solid #8e44ad;
+  padding: 20px; border-radius: 8px; margin-bottom: 25px;
+}
+.agenda-form h3 { margin-top: 0; margin-bottom: 15px; color: #701a75; font-size: 16px; }
+.agenda-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.agenda-grid input, .agenda-grid textarea {
+  padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; width: 100%;
+}
+.agenda-grid textarea { grid-column: 1 / -1; min-height: 70px; resize: vertical; }
+.btn-agenda { background: #8e44ad; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.btn-agenda:hover { background: #762697; }
+
+/* Pulsante Task Completata */
+.btn-complete { background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+.btn-complete:hover { background: #bbf7d0; }
+
+.agenda-badge-today { background: #fef08a; color: #854d0e; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+.agenda-badge-future { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+.agenda-badge-past { background: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+
     .footer-info { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
   </style>
 </head>
@@ -192,6 +223,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="btnTabRegistro">Inserimento Rapido</button>
     <button class="tab-btn" id="btnTabConsultazione">Consultazione & Archivio</button>
+    <button class="tab-btn agenda-tab" id="btnTabAgenda">📅 Agenda & Promemoria</button>
   </div>
 
   <!-- TAB 1: REGISTRO -->
@@ -317,6 +349,44 @@
       <tbody id="consultationTableBody"></tbody>
     </table>
   </div>
+<!-- BANNER NOTIFICA PROMEMORIA OGGI (Da mettere sotto al titolo del sito) -->
+<div id="todayReminderBanner" class="reminder-banner">
+  <h3>🔔 PROMEMORIA D'OGGI</h3>
+  <ul id="reminderList"></ul>
+</div>
+
+<!-- TAB 3: AGENDA & PROMEMORIA -->
+<div id="agenda" class="tab-content">
+  <div class="agenda-form">
+    <h3>➕ Aggiungi Promemoria in Agenda</h3>
+    <div class="agenda-grid">
+      <div>
+        <label style="font-size:12px; font-weight:bold; color:#64748b;">Data Evento</label>
+        <input type="date" id="agendaDate">
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:bold; color:#64748b;">Ora Evento (opzionale)</label>
+        <input type="time" id="agendaTime">
+      </div>
+      <textarea id="agendaNote" placeholder="Scrivi qui la nota o cosa c'è da fare..."></textarea>
+    </div>
+    <button class="btn-agenda" id="btnAddAgenda">Salva in Agenda</button>
+  </div>
+
+  <h3>Elenco Promemoria & Note</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Data e Ora</th>
+        <th>Stato</th>
+        <th>Nota / Promemoria</th>
+        <th>Creato da</th>
+        <th>Azione</th>
+      </tr>
+    </thead>
+    <tbody id="agendaTableBody"></tbody>
+  </table>
+</div>
 
   <div class="footer-info">
     Stato Database: Cloud Firestore (Sincronizzato in Tempo Reale)
@@ -346,7 +416,9 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const colRef = collection(db, "inserimenti");
-
+  const agendaRef = collection(db, "agenda");
+  let allAgenda = [];
+  let notifiedToday = false;
   let allItems = [];
 
   const loginModal = document.getElementById('loginModal');
@@ -561,6 +633,112 @@
     const container = buttonElement.parentElement;
     container.classList.toggle('revealed');
   };
+
+// Eliminazione/Completamento Task
+window.completeAgendaItem = async function(id) {
+  if (confirm("Segnare questo promemoria come completato e rimuoverlo dall'agenda?")) {
+    await deleteDoc(doc(db, "agenda", id));
+  }
+};
+
+// Ascolto DB Agenda
+onSnapshot(agendaRef, (snapshot) => {
+  allAgenda = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  renderAgenda();
+  checkTodayAlerts();
+});
+
+// Genera la tabella Agenda
+function renderAgenda() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tbody = document.getElementById('agendaTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const sortedAgenda = [...allAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+
+  sortedAgenda.forEach(item => {
+    let badgeHtml = '';
+    if (item.date === todayStr) {
+      badgeHtml = '<span class="agenda-badge-today">🔔 OGGI</span>';
+    } else if (item.date > todayStr) {
+      badgeHtml = '<span class="agenda-badge-future">PROSSIMO</span>';
+    } else {
+      badgeHtml = '<span class="agenda-badge-past">PASSATO</span>';
+    }
+
+    tbody.innerHTML += `<tr>
+      <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
+      <td>${badgeHtml}</td>
+      <td style="white-space: pre-wrap;">${item.note}</td>
+      <td>${item.operator}</td>
+      <td><button class="btn-complete" onclick="completeAgendaItem('${item.id}')">✓ Task completata</button></td>
+    </tr>`;
+  });
+}
+
+// Controllo notifiche di oggi
+function checkTodayAlerts() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayReminders = allAgenda.filter(a => a.date === todayStr);
+  const banner = document.getElementById('todayReminderBanner');
+  const list = document.getElementById('reminderList');
+
+  if (todayReminders.length > 0 && banner && list) {
+    list.innerHTML = '';
+    todayReminders.forEach(r => {
+      const timeText = r.time ? `(ore ${r.time})` : '';
+      list.innerHTML += `<li><strong>${timeText}</strong> ${r.note} <em>[creato da ${r.operator}]</em></li>`;
+    });
+    banner.style.display = 'block';
+
+    if (!notifiedToday && localStorage.getItem('logged_operator')) {
+      notifiedToday = true;
+      const notesSummary = todayReminders.map(r => `• ${r.time ? '[' + r.time + '] ' : ''}${r.note}`).join('\n');
+      alert(`🔔 PROMEMORIA DI OGGI (${todayStr}):\n\n${notesSummary}`);
+    }
+  } else if (banner) {
+    banner.style.display = 'none';
+  }
+}
+
+// Salva nuova nota
+document.getElementById('btnAddAgenda')?.addEventListener('click', async () => {
+  const dateVal = document.getElementById('agendaDate').value;
+  const timeVal = document.getElementById('agendaTime').value;
+  const noteVal = document.getElementById('agendaNote').value.trim();
+  const operator = document.getElementById('operatorName').value;
+
+  if (!operator) return alert("Effettua l'accesso per continuare.");
+  if (!dateVal || !noteVal) return alert("Inserisci almeno la Data e la Nota del promemoria!");
+
+  try {
+    await addDoc(agendaRef, {
+      date: dateVal,
+      time: timeVal || '',
+      note: noteVal,
+      operator: operator,
+      createdAt: new Date().toISOString()
+    });
+
+    document.getElementById('agendaDate').value = '';
+    document.getElementById('agendaTime').value = '';
+    document.getElementById('agendaNote').value = '';
+  } catch(err) {
+    alert("Errore nel salvataggio del promemoria.");
+  }
+});
+
+// Cambio scheda verso Agenda
+document.getElementById('btnTabAgenda')?.addEventListener('click', function() {
+  document.getElementById('agenda').classList.add('active');
+  document.getElementById('registro').classList.remove('active');
+  document.getElementById('consultazione').classList.remove('active');
+  this.classList.add('active');
+  document.getElementById('btnTabRegistro').classList.remove('active');
+  document.getElementById('btnTabConsultazione').classList.remove('active');
+  renderAgenda();
+});
 
   document.getElementById('btnExport').addEventListener('click', () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allItems, null, 2));
