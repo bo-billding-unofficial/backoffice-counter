@@ -605,6 +605,7 @@
     document.getElementById('consultazione').classList.remove('active');
     this.classList.add('active');
     document.getElementById('btnTabConsultazione').classList.remove('active');
+    document.getElementById('btnTabAgenda').classList.remove('active');
   });
 
   document.getElementById('btnTabConsultazione').addEventListener('click', function() {
@@ -612,6 +613,7 @@
     document.getElementById('registro').classList.remove('active');
     this.classList.add('active');
     document.getElementById('btnTabRegistro').classList.remove('active');
+    document.getElementById('btnTabAgenda').classList.remove('active');
     renderConsultation();
   });
 
