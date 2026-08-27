@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counter Inserimenti Backoffice</title>
+  <style>
+    :root {
+      --bg: #f4f6f9; --card: #ffffff; --text: #2c3e50; --border: #e2e8f0;
+      --sicuro: #27ae60; --non-sicuro: #f39c12; --non-pagato: #e74c3c;
+      --primary: #3498db; --primary-dark: #2980b9;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { max-width: 1050px; margin: 0 auto; }
+    
+    h1 { text-align: center; color: #1a252f; margin-bottom: 5px; font-size: 26px; }
+    p.subtitle { text-align: center; color: #7f8c8d; margin-top: 0; margin-bottom: 20px; font-size: 14px; }
+
+    /* Modal / Screen di Login Operatore */
+    #loginModal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;
+    }
+    .login-box {
+      background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;
+    }
+    .login-box h2 { margin-top: 0; color: #1e293b; font-size: 22px; }
+    .login-box select, .login-box input {
+      width: 100%; padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 6px; font-size: 15px;
+    }
+    .login-box button {
+      width: 100%; padding: 12px; background: var(--primary); color: white; border: none;
+      border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;
+    }
+    .login-box button:hover { background: var(--primary-dark); }
+
+    .disclaimer {
+      background: #fff8e6; border-left: 4px solid var(--non-sicuro); color: #8a6d3b;
+      padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13.5px;
+    }
+
+    .header-bar {
+      display: flex; gap: 15px; justify-content: space-between; align-items: center;
+      background: var(--card); padding: 15px 20px; border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .operator-group { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 250px; }
+    .operator-group input {
+      padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 14px; outline: none; width: 100%; max-width: 200px; background: #f1f5f9; font-weight: bold;
+    }
+    .btn-logout { background: #cbd5e1; color: #334155; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    
+    .sync-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-sync {
+      padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer;
+      font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-export { background: #e8f8f5; color: #117a65; border: 1px solid #a3e4d7; }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn {
+      flex: 1; padding: 14px; border: none; background: #e2e8f0; color: #4a5568;
+      cursor: pointer; font-size: 15px; font-weight: bold; border-radius: 8px; transition: all 0.2s;
+    }
+    .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 6px rgba(52,152,219,0.3); }
+    .tab-content { display: none; background: var(--card); padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .tab-content.active { display: block; }
+
+    .btn-group { display: flex; gap: 15px; margin-bottom: 25px; }
+    .btn-counter {
+      flex: 1; padding: 22px 10px; border: none; color: white; font-size: 17px; font-weight: bold;
+      border-radius: 10px; cursor: pointer; transition: transform 0.1s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .btn-counter:active { transform: scale(0.97); }
+    .btn-sicuro { background: var(--sicuro); }
+    .btn-non-sicuro { background: var(--non-sicuro); }
+    .btn-non-pagato { background: var(--non-pagato); }
+
+    .stats-card {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid var(--primary);
+      padding: 18px; border-radius: 8px; margin-bottom: 25px; display: flex;
+      justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 15px;
+    }
+    .stat-item { text-align: center; }
+    .stat-item label { display: block; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .stat-item span { font-size: 24px; font-weight: 800; color: var(--text); }
+    .stat-item span.highlight { color: var(--primary); }
+    .stat-item span.money { color: var(--sicuro); }
+
+    .bulk-panel { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 18px; border-radius: 8px; margin-bottom: 25px; }
+    .bulk-panel h3 { margin-top: 0; margin-bottom: 12px; font-size: 15px; color: #334155; }
+    .bulk-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+    .bulk-controls input, .bulk-controls select { padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white; }
+    .btn-apply { background: var(--primary); color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+    .filters { display: flex; gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 12px; font-weight: 600; color: #64748b; }
+    .filters input, .filters select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; background: white; }
+    .btn-reset { padding: 8px 12px; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 12px; text-align: left; font-size: 14px; }
+    th { background: #f8fafc; color: #475569; font-weight: 700; }
+    
+    .btn-delete { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; text-transform: uppercase; }
+    .badge-sicuro { background: #dcfce7; color: #15803d; }
+    .badge-non-sicuro { background: #fef9c3; color: #a16207; }
+    .badge-non-pagato { background: #fee2e2; color: #b91c1c; }
+
+    .footer-info { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<!-- SCHERMATA DI LOGIN -->
+<div id="loginModal">
+  <div class="login-box">
+    <h2>Accesso Operatore</h2>
+    <p style="font-size: 13px; color: #64748b;">Seleziona il tuo profilo e inserisci la password per continuare.</p>
+    
+    <select id="selectOperator">
+      <option value="">-- Seleziona Operatore --</option>
+      <option value="Armando">Armando</option>
+      <option value="Claudio">Claudio</option>
+      <option value="Admin">Admin</option>
+    </select>
+    
+    <input type="password" id="inputPassword" placeholder="Inserisci Password / PIN">
+    <button id="btnLogin">Accedi</button>
+  </div>
+</div>
+
+<div class="container">
+  <h1>Registro Inserimenti Backoffice</h1>
+  <p class="subtitle">Gestione conteggio giornaliero e remunerazione mensile</p>
+
+  <div class="disclaimer">
+    ⚠️ <strong>Nota bene:</strong> La remunerazione totale registrata con questo counter non è reale ma solo indicativa dell'andamento giornaliero/mensile.
+  </div>
+
+  <div class="header-bar">
+    <div class="operator-group">
+      <label for="operatorName"><strong>Operatore:</strong></label>
+      <input type="text" id="operatorName" readonly>
+      <button class="btn-logout" id="btnLogout">Esci</button>
+    </div>
+    <div class="sync-actions">
+      <button class="btn-sync btn-export" id="btnExport">📥 Esporta Dati (JSON)</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="btnTabRegistro">Inserimento Rapido</button>
+    <button class="tab-btn" id="btnTabConsultazione">Consultazione & Archivio</button>
+  </div>
+
+  <!-- TAB 1: REGISTRO -->
+  <div id="registro" class="tab-content active">
+    <div class="btn-group">
+      <button class="btn-counter btn-sicuro" id="btnAddSicuro">+1 Inserito Sicuro</button>
+      <button class="btn-counter btn-non-sicuro" id="btnAddNonSicuro">+1 Inserito Non Sicuro</button>
+      <button class="btn-counter btn-non-pagato" id="btnAddNonPagato">+1 Inserito Non Pagato</button>
+    </div>
+
+    <div class="stats-card">
+      <div class="stat-item">
+        <label>Totale Inserimenti Mese</label>
+        <span id="monthTotalAll">0</span>
+      </div>
+      <div class="stat-item">
+        <label>Inserimenti Remunerati (Sicuri + Non Sicuri)</label>
+        <span id="monthPaidCount" class="highlight">0</span>
+      </div>
+      <div class="stat-item">
+        <label>Guadagno Lordo Team Stimato Mese</label>
+        <span id="monthEarnings" class="money">0.00 €</span>
+      </div>
+    </div>
+
+    <div class="bulk-panel">
+      <h3>Aggiungi / Storna Inserimenti in Blocco</h3>
+      <div class="bulk-controls">
+        <input type="number" id="bulkQty" placeholder="Quantità (es. 10 o -5)" style="width: 170px;">
+        <select id="bulkCategory">
+          <option value="Inserito Sicuro">Inserito Sicuro</option>
+          <option value="Inserito Non Sicuro">Inserito Non Sicuro</option>
+          <option value="Inserito Non Pagato">Inserito Non Pagato</option>
+        </select>
+        <button class="btn-apply" id="btnApplyBulk">Applica Operazione</button>
+      </div>
+    </div>
+
+    <h3>Inserimenti di Oggi</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Ora</th>
+          <th>Operatore</th>
+          <th>Categoria</th>
+          <th>Azione</th>
+        </tr>
+      </thead>
+      <tbody id="todayTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- TAB 2: CONSULTAZIONE -->
+  <div id="consultazione" class="tab-content">
+    <div class="filters">
+      <div class="filter-group">
+        <label>Mese</label>
+        <input type="month" id="filterMonth">
+      </div>
+      <div class="filter-group">
+        <label>Giorno</label>
+        <input type="date" id="filterDate">
+      </div>
+      <div class="filter-group">
+        <label>Operatore</label>
+        <input type="text" id="filterOperator" placeholder="Nome operatore...">
+      </div>
+      <div class="filter-group">
+        <label>Categoria</label>
+        <select id="filterCategory">
+          <option value="">Tutte</option>
+          <option value="Inserito Sicuro">Inserito Sicuro</option>
+          <option value="Inserito Non Sicuro">Inserito Non Sicuro</option>
+          <option value="Inserito Non Pagato">Inserito Non Pagato</option>
+        </select>
+      </div>
+      <button class="btn-reset" id="btnResetFilters">Resetta Filtri</button>
+    </div>
+
+    <div class="stats-card" style="border-left-color: #27ae60;">
+      <div class="stat-item">
+        <label>Totale Inserimenti Filtrati</label>
+        <span id="filteredTotalCount">0</span>
+      </div>
+      <div class="stat-item">
+        <label>Inserimenti Remunerati Filtrati</label>
+        <span id="filteredPaidCount" class="highlight">0</span>
+      </div>
+      <div class="stat-item">
+        <label>Guadagno Lordo Team Stimato Mese Selezionato</label>
+        <span id="selectedMonthEarnings" class="money">0.00 €</span>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data e Ora</th>
+          <th>Operatore</th>
+          <th>Categoria</th>
+          <th>Quantità</th>
+          <th>Azione</th>
+        </tr>
+      </thead>
+      <tbody id="consultationTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="footer-info">
+    Stato Database: Cloud Firestore (Sincronizzato in Tempo Reale)
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } 
+    from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const OPERATOR_PASSWORDS = {
+    "Armando": "2808",
+    "Claudio": "5678",
+    "Admin": "8159"
+  };
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCUUdVuzsAqMnZF2pmstjiJ5EujSDEexAs",
+    authDomain: "counter-inserimenti-backoffice.firebaseapp.com",
+    projectId: "counter-inserimenti-backoffice",
+    storageBucket: "counter-inserimenti-backoffice.firebasestorage.app",
+    messagingSenderId: "1058910346856",
+    appId: "1:1058910346856:web:f7373eae68d1ef352ce5dd"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const colRef = collection(db, "inserimenti");
+
+  let allItems = [];
+
+  const loginModal = document.getElementById('loginModal');
+  const loggedUser = localStorage.getItem('logged_operator');
+
+  if (loggedUser) {
+    document.getElementById('operatorName').value = loggedUser;
+    loginModal.style.display = 'none';
+  }
+
+  document.getElementById('btnLogin').addEventListener('click', () => {
+    const selectedOp = document.getElementById('selectOperator').value;
+    const inputPass = document.getElementById('inputPassword').value;
+
+    if (!selectedOp) {
+      alert("Seleziona un operatore!");
+      return;
+    }
+
+    if (OPERATOR_PASSWORDS[selectedOp] === inputPass) {
+      localStorage.setItem('logged_operator', selectedOp);
+      document.getElementById('operatorName').value = selectedOp;
+      loginModal.style.display = 'none';
+      document.getElementById('inputPassword').value = '';
+    } else {
+      alert("Password errata!");
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('logged_operator');
+    location.reload();
+  });
+
+  document.getElementById('filterMonth').value = new Date().toISOString().substring(0, 7);
+
+  function calculateEarnings(paidCount) {
+    let rate = 0.40;
+    if (paidCount >= 2000) rate = 1.20;
+    else if (paidCount >= 1600) rate = 1.00;
+    else if (paidCount >= 1200) rate = 0.80;
+    else if (paidCount >= 800) rate = 0.60;
+    return (paidCount * rate).toFixed(2);
+  }
+
+  function getBadge(cat) {
+    if (cat === 'Inserito Sicuro') return '<span class="badge badge-sicuro">Sicuro</span>';
+    if (cat === 'Inserito Non Sicuro') return '<span class="badge badge-non-sicuro">Non Sicuro</span>';
+    return '<span class="badge badge-non-pagato">Non Pagato</span>';
+  }
+
+  async function addRecord(category, qty = 1) {
+    const operator = document.getElementById('operatorName').value;
+    if (!operator) {
+      alert("Devi effettuare l'accesso per operare.");
+      return;
+    }
+    const now = new Date();
+    
+    try {
+      await addDoc(colRef, {
+        timestamp: now.toISOString(),
+        date: now.toISOString().split('T')[0],
+        time: now.toTimeString().split(' ')[0].substring(0, 5),
+        month: now.toISOString().substring(0, 7),
+        operator: operator,
+        category: category,
+        qty: qty
+      });
+    } catch(err) {
+      alert("Errore nel salvataggio dei dati.");
+    }
+  }
+
+  // CONTROLLO PERMESSI DI CANCELLAZIONE
+  window.deleteRecord = async function(id, recordOperator) {
+    const currentUser = document.getElementById('operatorName').value;
+
+    if (currentUser !== 'Admin' && currentUser !== recordOperator) {
+      alert(`Non puoi cancellare questo inserimento! È stato effettuato da ${recordOperator}.`);
+      return;
+    }
+
+    if (confirm("Sei sicuro di voler cancellare questo inserimento?")) {
+      await deleteDoc(doc(db, "inserimenti", id));
+    }
+  };
+
+  onSnapshot(colRef, (snapshot) => {
+    allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderAll();
+    renderConsultation();
+  });
+
+  function renderAll() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+    const currentMonthItems = allItems.filter(i => i.month === currentMonthStr);
+    const monthTotalAll = currentMonthItems.reduce((acc, i) => acc + (i.qty || 1), 0);
+
+    const currentMonthPaidItems = currentMonthItems.filter(i => i.category !== 'Inserito Non Pagato');
+    const monthPaidCount = currentMonthPaidItems.reduce((acc, i) => acc + (i.qty || 1), 0);
+
+    document.getElementById('monthTotalAll').innerText = monthTotalAll;
+    document.getElementById('monthPaidCount').innerText = monthPaidCount;
+    document.getElementById('monthEarnings').innerText = calculateEarnings(monthPaidCount) + ' €';
+
+    const todayItems = allItems.filter(i => i.date === todayStr).sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+    const todayTbody = document.getElementById('todayTableBody');
+    todayTbody.innerHTML = '';
+
+    todayItems.forEach(item => {
+      todayTbody.innerHTML += `<tr>
+        <td>${item.time}</td>
+        <td>${item.operator}</td>
+        <td>${getBadge(item.category)} ${item.qty && item.qty !== 1 ? `<strong>(x${item.qty})</strong>` : ''}</td>
+        <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
+      </tr>`;
+    });
+  }
+
+  function renderConsultation() {
+    const filterMonth = document.getElementById('filterMonth').value;
+    const filterDate = document.getElementById('filterDate').value;
+    const filterOperator = document.getElementById('filterOperator').value.trim().toLowerCase();
+    const filterCategory = document.getElementById('filterCategory').value;
+
+    let filtered = [...allItems];
+
+    if (filterMonth) filtered = filtered.filter(i => i.month === filterMonth);
+    if (filterDate) filtered = filtered.filter(i => i.date === filterDate);
+    if (filterCategory) filtered = filtered.filter(i => i.category === filterCategory);
+    if (filterOperator) filtered = filtered.filter(i => i.operator.toLowerCase().includes(filterOperator));
+
+    filtered.sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+
+    const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
+    const filteredPaidCount = filtered.filter(i => i.category !== 'Inserito Non Pagato').reduce((acc, i) => acc + (i.qty || 1), 0);
+
+    document.getElementById('filteredTotalCount').innerText = filteredTotalCount;
+    document.getElementById('filteredPaidCount').innerText = filteredPaidCount;
+
+    const targetMonth = filterMonth || new Date().toISOString().substring(0, 7);
+    const monthPaidItems = allItems.filter(i => i.month === targetMonth && i.category !== 'Inserito Non Pagato');
+    const targetMonthPaidCount = monthPaidItems.reduce((acc, i) => acc + (i.qty || 1), 0);
+
+    document.getElementById('selectedMonthEarnings').innerText = calculateEarnings(targetMonthPaidCount) + ' €';
+
+    const tbody = document.getElementById('consultationTableBody');
+    tbody.innerHTML = '';
+
+    filtered.forEach(item => {
+      const q = item.qty || 1;
+      tbody.innerHTML += `<tr>
+        <td>${item.date} ${item.time}</td>
+        <td>${item.operator}</td>
+        <td>${getBadge(item.category)}</td>
+        <td>${q > 0 ? '+' + q : q}</td>
+        <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
+      </tr>`;
+    });
+  }
+
+  document.getElementById('btnAddSicuro').addEventListener('click', () => addRecord('Inserito Sicuro'));
+  document.getElementById('btnAddNonSicuro').addEventListener('click', () => addRecord('Inserito Non Sicuro'));
+  document.getElementById('btnAddNonPagato').addEventListener('click', () => addRecord('Inserito Non Pagato'));
+
+  document.getElementById('btnApplyBulk').addEventListener('click', () => {
+    const qtyInput = document.getElementById('bulkQty');
+    const qty = parseInt(qtyInput.value);
+    const category = document.getElementById('bulkCategory').value;
+
+    if (isNaN(qty) || qty === 0) {
+      alert("Inserisci un numero valido diverso da zero.");
+      return;
+    }
+    addRecord(category, qty);
+    qtyInput.value = '';
+  });
+
+  document.getElementById('btnTabRegistro').addEventListener('click', function() {
+    document.getElementById('registro').classList.add('active');
+    document.getElementById('consultazione').classList.remove('active');
+    this.classList.add('active');
+    document.getElementById('btnTabConsultazione').classList.remove('active');
+  });
+
+  document.getElementById('btnTabConsultazione').addEventListener('click', function() {
+    document.getElementById('consultazione').classList.add('active');
+    document.getElementById('registro').classList.remove('active');
+    this.classList.add('active');
+    document.getElementById('btnTabRegistro').classList.remove('active');
+    renderConsultation();
+  });
+
+  document.getElementById('filterMonth').addEventListener('change', renderConsultation);
+  document.getElementById('filterDate').addEventListener('change', renderConsultation);
+  document.getElementById('filterOperator').addEventListener('input', renderConsultation);
+  document.getElementById('filterCategory').addEventListener('change', renderConsultation);
+
+  document.getElementById('btnResetFilters').addEventListener('click', () => {
+    document.getElementById('filterMonth').value = '';
+    document.getElementById('filterDate').value = '';
+    document.getElementById('filterOperator').value = '';
+    document.getElementById('filterCategory').value = '';
+    renderConsultation();
+  });
+
+  document.getElementById('btnExport').addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allItems, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `backoffice_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  });
+</script>
+
+</body>
+</html>
