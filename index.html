@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Counter Inserimenti Backoffice</title>
   <style>
+    /* Nasconde il contenuto principale finché il ruolo non viene verificato da JS */
+.container {
+  display: none;
+}
     :root {
       --bg: #f4f6f9; --card: #ffffff; --text: #2c3e50; --border: #e2e8f0;
       --sicuro: #27ae60; --non-sicuro: #f39c12; --non-pagato: #e74c3c;
@@ -20,7 +24,7 @@
     /* Modal / Screen di Login Operatore */
     #loginModal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.85); display: flex; justify-content: center; align-items: center; z-index: 9999;
+      background: #0f172a; display: flex; justify-content: center; align-items: center; z-index: 9999;
     }
     .login-box {
       background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 380px;
@@ -190,11 +194,11 @@
     <p style="font-size: 13px; color: #64748b;">Seleziona il tuo profilo e inserisci la password per continuare.</p>
     
     <select id="selectOperator">
-      <option value="">-- Seleziona Operatore --</option>
-      <option value="Armando">Armando</option>
-      <option value="Claudio">Claudio</option>
-      <option value="Admin">Admin</option>
-    </select>
+  <option value="">-- Seleziona Operatore --</option>
+  <option value="Armando">Armando</option>
+  <option value="Claudio">Claudio</option>
+  <option value="Guest">Guest</option>
+</select>
     
     <input type="password" id="inputPassword" placeholder="Inserisci Password / PIN">
     <button id="btnLogin">Accedi</button>
@@ -205,8 +209,8 @@
   <h1>Registro Inserimenti Backoffice</h1>
   <p class="subtitle">Gestione conteggio giornaliero e remunerazione mensile</p>
 
-  <div class="disclaimer">
-    ⚠️ <strong>Nota bene:</strong> La remunerazione totale registrata con questo counter non è reale ma solo indicativa dell'andamento giornaliero/mensile.
+  <div class="disclaimer" id="disclaimerText">
+    ⚠️ <strong>Nota bene:</strong> La remunerazione totale registrata con questo counter non è reale ma solo indicativa dell'andamento mensile.
   </div>
 
   <div class="header-bar">
@@ -216,18 +220,18 @@
       <button class="btn-logout" id="btnLogout">Esci</button>
     </div>
     <div class="sync-actions">
-      <button class="btn-sync btn-export" id="btnExport">📥 Esporta Dati (JSON)</button>
+      <button class="btn-sync btn-export" id="btnExport">💾 Esporta Dati (JSON)</button>
     </div>
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" id="btnTabRegistro">Inserimento Rapido</button>
-    <button class="tab-btn" id="btnTabConsultazione">Consultazione & Archivio</button>
+    <button class="tab-btn active" id="btnTabRegistro">📥 Inserimento Rapido</button>
+    <button class="tab-btn" id="btnTabConsultazione">🗃️ Consultazione & Archivio</button>
     <button class="tab-btn agenda-tab" id="btnTabAgenda">📅 Agenda & Promemoria</button>
   </div>
 
   <!-- TAB 1: REGISTRO -->
-  <div id="registro" class="tab-content active">
+  <div id="registro" class="tab-content">
     <div class="btn-group">
       <button class="btn-counter btn-sicuro" id="btnAddSicuro">+1 Inserito Sicuro</button>
       <button class="btn-counter btn-non-sicuro" id="btnAddNonSicuro">+1 Inserito Non Sicuro</button>
@@ -235,28 +239,35 @@
     </div>
 
     <div class="stats-card">
-      <div class="stat-item">
-        <label>Totale Inserimenti Mese</label>
-        <div class="privacy-container">
-          <span id="monthTotalAll" class="blurred-data">0</span>
-          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
-        </div>
-      </div>
-      <div class="stat-item">
-        <label>Inserimenti Remunerati (Sicuri + Non Sicuri)</label>
-        <div class="privacy-container">
-          <span id="monthPaidCount" class="highlight blurred-data">0</span>
-          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
-        </div>
-      </div>
-      <div class="stat-item">
-        <label>Guadagno Lordo Team Stimato Mese</label>
-        <div class="privacy-container">
-          <span id="monthEarnings" class="money blurred-data">0.00 €</span>
-          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
-        </div>
-      </div>
+  <div class="stat-item">
+    <label>Totale Inserimenti Mese</label>
+    <div class="privacy-container">
+      <span id="monthTotalAll" class="blurred-data">0</span>
+      <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
     </div>
+  </div>
+  <div class="stat-item">
+    <label>Inserimenti Remunerati</label>
+    <div class="privacy-container">
+      <span id="monthPaidCount" class="blurred-data highlight">0</span>
+      <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+    </div>
+  </div>
+  <div class="stat-item">
+    <label>Scaglione Attuale</label>
+    <div class="privacy-container">
+      <span id="currentRate" class="blurred-data" style="color: #8e44ad;">0.40 €</span>
+      <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+    </div>
+  </div>
+  <div class="stat-item">
+    <label>Guadagno Lordo Team Stimato</label>
+    <div class="privacy-container">
+      <span id="monthEarnings" class="blurred-data money">0.00 €</span>
+      <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+    </div>
+  </div>
+</div>
 
     <div class="bulk-panel">
       <h3>Aggiungi / Storna Inserimenti in Blocco</h3>
@@ -327,13 +338,6 @@
           <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
-      <div class="stat-item">
-        <label>Guadagno Lordo Team Stimato Mese Selezionato</label>
-        <div class="privacy-container">
-          <span id="selectedMonthEarnings" class="money blurred-data">0.00 €</span>
-          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
-        </div>
-      </div>
     </div>
 
     <table>
@@ -356,8 +360,11 @@
 </div>
 
 <!-- TAB 3: AGENDA & PROMEMORIA -->
+<!-- TAB 3: AGENDA & PROMEMORIA -->
 <div id="agenda" class="tab-content">
-  <div class="agenda-form">
+
+  <!-- Form Promemoria Visibile solo agli Operatori/Admin -->
+  <div class="agenda-form" id="agendaFormContainer">
     <h3>➕ Aggiungi Promemoria in Agenda</h3>
     <div class="agenda-grid">
       <div>
@@ -373,19 +380,58 @@
     <button class="btn-agenda" id="btnAddAgenda">Salva in Agenda</button>
   </div>
 
-  <h3>Elenco Promemoria & Note</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Data e Ora</th>
-        <th>Stato</th>
-        <th>Nota / Promemoria</th>
-        <th>Creato da</th>
-        <th>Azione</th>
-      </tr>
-    </thead>
-    <tbody id="agendaTableBody"></tbody>
-  </table>
+<!-- Sezione Note per il Guest (Salva in DB ma mostra solo quelle locali) -->
+<div id="guestNotesContainer" style="display: none;" class="agenda-form">
+  <h3>📝 Lascia una Nota / Promemoria</h3>
+  <div class="agenda-grid">
+    <div>
+      <label style="font-size:12px; font-weight:bold; color:#64748b;">Il tuo Nome (opzionale)</label>
+      <input type="text" id="guestAuthorName" placeholder="Guest">
+    </div>
+    <div>
+      <label style="font-size:12px; font-weight:bold; color:#64748b;">Data Evento</label>
+      <input type="date" id="guestAgendaDate">
+    </div>
+    <div>
+      <label style="font-size:12px; font-weight:bold; color:#64748b;">Ora Evento (opzionale)</label>
+      <input type="time" id="guestAgendaTime">
+    </div>
+    <textarea id="guestNoteInput" placeholder="Scrivi qui la tua nota o segnalazione..."></textarea>
+  </div>
+  <button class="btn-agenda" id="btnSaveGuestNote">Invia Nota in Agenda</button>
+
+  <!-- Tabella visibile al Guest solo per le sue note inserite nella sessione -->
+  <div style="margin-top: 25px;">
+    <h4>Le tue note inviate in questa sessione:</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Data e Ora</th>
+          <th>Nota / Promemoria</th>
+          <th>Stato Invio</th>
+        </tr>
+      </thead>
+      <tbody id="guestSessionNotesBody"></tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- Contenitore Promemoria Globali (Nascosto al Guest) -->
+  <div id="standardNotesContainer">
+    <h3>Elenco Promemoria & Note</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Data e Ora</th>
+          <th>Stato</th>
+          <th>Nota / Promemoria</th>
+          <th>Creato da</th>
+          <th>Azione</th>
+        </tr>
+      </thead>
+      <tbody id="agendaTableBody"></tbody>
+    </table>
+  </div>
 </div>
 
   <div class="footer-info">
@@ -399,9 +445,14 @@
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const OPERATOR_PASSWORDS = {
-    "Armando": "2808",
-    "Claudio": "5678",
-    "Admin": "8159"
+    "Armando": atob("MjgwOA=="),
+    "Claudio": atob("NTY3OA==")
+  };
+
+  const OPERATOR_ROLES = {
+    "Armando": "admin",
+    "Claudio": "operatore",
+    "Guest": "guest"
   };
 
   const firebaseConfig = {
@@ -424,12 +475,56 @@
   const loginModal = document.getElementById('loginModal');
   const loggedUser = localStorage.getItem('logged_operator');
 
+  // Rende disponibili a livello globale le funzioni richiamate negli attributi HTML (onclick, ecc.)
+  window.toggleBlur = function(btn) {
+    const container = btn.closest('.privacy-container');
+    if (container) {
+      container.classList.toggle('revealed');
+    }
+  };
+
+  window.deleteRecord = async function(id, recordOp) {
+    const currentOp = localStorage.getItem('logged_operator');
+    const role = OPERATOR_ROLES[currentOp];
+
+    if (role !== 'admin' && currentOp !== recordOp) {
+      alert("Non hai i permessi per eliminare gli inserimenti degli altri utenti!");
+      return;
+    }
+
+    if (confirm("Sei sicuro di voler cancellare questo inserimento?")) {
+      try {
+        await deleteDoc(doc(db, "inserimenti", id));
+      } catch (err) {
+        console.error(err);
+        alert("Errore durante la cancellazione.");
+      }
+    }
+  };
+
+  window.completeAgendaItem = async function(id) {
+    if (confirm("Segnare questo promemoria come completato ed eliminarlo?")) {
+      try {
+        await deleteDoc(doc(db, "agenda", id));
+      } catch (err) {
+        console.error(err);
+        alert("Errore durante il completamento del promemoria.");
+      }
+    }
+  };
+
+  // Controllo iniziale utente salvato
   if (loggedUser) {
-    document.getElementById('operatorName').value = loggedUser;
-    loginModal.style.display = 'none';
+    const opInput = document.getElementById('operatorName');
+    if (opInput) opInput.value = loggedUser;
+    if (loginModal) loginModal.style.display = 'none';
+    applyPermissionsByRole(loggedUser);
+  } else {
+    if (loginModal) loginModal.style.display = 'flex';
   }
 
-  document.getElementById('btnLogin').addEventListener('click', () => {
+  // Evento Login
+  document.getElementById('btnLogin')?.addEventListener('click', () => {
     const selectedOp = document.getElementById('selectOperator').value;
     const inputPass = document.getElementById('inputPassword').value;
 
@@ -438,82 +533,214 @@
       return;
     }
 
+    const role = OPERATOR_ROLES[selectedOp];
+
+    if (role === 'guest') {
+      localStorage.setItem('logged_operator', selectedOp);
+      const opInput = document.getElementById('operatorName');
+      if (opInput) opInput.value = selectedOp;
+      if (loginModal) loginModal.style.display = 'none';
+      document.getElementById('inputPassword').value = '';
+      applyPermissionsByRole(selectedOp);
+      return;
+    }
+
     if (OPERATOR_PASSWORDS[selectedOp] === inputPass) {
       localStorage.setItem('logged_operator', selectedOp);
-      document.getElementById('operatorName').value = selectedOp;
-      loginModal.style.display = 'none';
+      const opInput = document.getElementById('operatorName');
+      if (opInput) opInput.value = selectedOp;
+      if (loginModal) loginModal.style.display = 'none';
       document.getElementById('inputPassword').value = '';
+      applyPermissionsByRole(selectedOp);
     } else {
       alert("Password errata!");
     }
   });
 
-  document.getElementById('btnLogout').addEventListener('click', () => {
-    localStorage.removeItem('logged_operator');
-    location.reload();
+  // Logout
+  document.querySelectorAll('#btnLogout').forEach(btn => {
+    btn.addEventListener('click', () => {
+      localStorage.removeItem('logged_operator');
+      sessionStorage.removeItem('guest_session_notes');
+      location.reload();
+    });
   });
 
-  document.getElementById('filterMonth').value = new Date().toISOString().substring(0, 7);
-
-  function calculateEarnings(paidCount) {
-    let rate = 0.40;
-    if (paidCount >= 2000) rate = 1.20;
-    else if (paidCount >= 1600) rate = 1.00;
-    else if (paidCount >= 1200) rate = 0.80;
-    else if (paidCount >= 800) rate = 0.60;
-    return (paidCount * rate).toFixed(2);
-  }
-
-  function getBadge(cat) {
-    if (cat === 'Inserito Sicuro') return '<span class="badge badge-sicuro">Sicuro</span>';
-    if (cat === 'Inserito Non Sicuro') return '<span class="badge badge-non-sicuro">Non Sicuro</span>';
-    return '<span class="badge badge-non-pagato">Non Pagato</span>';
-  }
-
+  // Funzioni di inserimento record counter
   async function addRecord(category, qty = 1) {
-    const operator = document.getElementById('operatorName').value;
-    if (!operator) {
-      alert("Devi effettuare l'accesso per operare.");
-      return;
-    }
+    const operator = localStorage.getItem('logged_operator') || 'Sconosciuto';
     const now = new Date();
-    
+    const dateStr = now.toISOString().split('T')[0];
+    const monthStr = dateStr.substring(0, 7);
+    const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+
     try {
       await addDoc(colRef, {
-        timestamp: now.toISOString(),
-        date: now.toISOString().split('T')[0],
-        time: now.toTimeString().split(' ')[0].substring(0, 5),
-        month: now.toISOString().substring(0, 7),
         operator: operator,
         category: category,
-        qty: qty
+        qty: parseInt(qty, 10),
+        date: dateStr,
+        month: monthStr,
+        time: timeStr,
+        timestamp: now.toISOString()
       });
-    } catch(err) {
-      alert("Errore nel salvataggio dei dati.");
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante il salvataggio dell'inserimento.");
     }
   }
 
-  // CONTROLLO PERMESSI DI CANCELLAZIONE
-  window.deleteRecord = async function(id, recordOperator) {
-    const currentUser = document.getElementById('operatorName').value;
+  document.getElementById('btnAddSicuro')?.addEventListener('click', () => addRecord('Inserito Sicuro', 1));
+  document.getElementById('btnAddNonSicuro')?.addEventListener('click', () => addRecord('Inserito Non Sicuro', 1));
+  document.getElementById('btnAddNonPagato')?.addEventListener('click', () => addRecord('Inserito Non Pagato', 1));
 
-    if (currentUser !== 'Admin' && currentUser !== recordOperator) {
-      alert(`Non puoi cancellare questo inserimento! È stato effettuato da ${recordOperator}.`);
+  document.getElementById('btnApplyBulk')?.addEventListener('click', () => {
+    const qtyInput = document.getElementById('bulkQty');
+    const catSelect = document.getElementById('bulkCategory');
+    const qty = parseInt(qtyInput?.value, 10);
+
+    if (isNaN(qty) || qty === 0) {
+      alert("Inserisci una quantità valida (diversa da 0).");
       return;
     }
 
-    if (confirm("Sei sicuro di voler cancellare questo inserimento?")) {
-      await deleteDoc(doc(db, "inserimenti", id));
-    }
-  };
+    addRecord(catSelect.value, qty);
+    if (qtyInput) qtyInput.value = '';
+  });
 
+  // Salva Agenda Operatori / Admin
+  document.getElementById('btnAddAgenda')?.addEventListener('click', async () => {
+    const dateVal = document.getElementById('agendaDate')?.value;
+    const timeVal = document.getElementById('agendaTime')?.value;
+    const noteVal = document.getElementById('agendaNote')?.value.trim();
+    const operator = localStorage.getItem('logged_operator') || 'Sconosciuto';
+
+    if (!dateVal || !noteVal) {
+      alert("Inserisci la Data e la Nota del promemoria.");
+      return;
+    }
+
+    try {
+      await addDoc(agendaRef, {
+        date: dateVal,
+        time: timeVal || '',
+        note: noteVal,
+        operator: operator,
+        createdAt: new Date().toISOString()
+      });
+
+      document.getElementById('agendaDate').value = '';
+      document.getElementById('agendaTime').value = '';
+      document.getElementById('agendaNote').value = '';
+      alert("Promemoria salvato in agenda!");
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante il salvataggio in agenda.");
+    }
+  });
+
+  // Esporta Dati in JSON (Solo Admin)
+  document.getElementById('btnExport')?.addEventListener('click', () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allItems, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `export_inserimenti_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  });
+
+  // Invia nota Guest (Corretta)
+  async function submitGuestNote() {
+    const authorEl = document.getElementById('guestAuthorName');
+    const dateEl = document.getElementById('guestAgendaDate');
+    const timeEl = document.getElementById('guestAgendaTime');
+    const noteEl = document.getElementById('guestNoteInput');
+
+    const authorVal = authorEl ? authorEl.value.trim() : '';
+    const dateVal = dateEl ? dateEl.value : '';
+    const timeVal = timeEl ? timeEl.value : '';
+    const noteVal = noteEl ? noteEl.value.trim() : '';
+
+    const operatorName = authorVal ? `Guest (${authorVal})` : 'Guest';
+
+    if (!dateVal || !noteVal) {
+      alert("Inserisci almeno la Data e la Nota prima di inviare!");
+      return;
+    }
+
+    try {
+      await addDoc(agendaRef, {
+        date: dateVal,
+        time: timeVal || '',
+        note: noteVal,
+        operator: operatorName,
+        createdAt: new Date().toISOString()
+      });
+
+      const guestNotes = JSON.parse(sessionStorage.getItem('guest_session_notes') || '[]');
+      guestNotes.push({ 
+        date: dateVal, 
+        time: timeVal || '', 
+        note: noteVal 
+      });
+      sessionStorage.setItem('guest_session_notes', JSON.stringify(guestNotes));
+
+      if (authorEl) authorEl.value = '';
+      if (dateEl) dateEl.value = '';
+      if (timeEl) timeEl.value = '';
+      if (noteEl) noteEl.value = '';
+
+      renderGuestSessionNotes();
+      alert("Nota inviata con successo al team!");
+
+    } catch(err) {
+      console.error(err);
+      alert("Errore durante l'invio della nota nel database.");
+    }
+  }
+
+  document.getElementById('btnSaveGuestNote')?.addEventListener('click', submitGuestNote);
+
+  function renderGuestSessionNotes() {
+    const tbody = document.getElementById('guestSessionNotesBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const guestNotes = JSON.parse(sessionStorage.getItem('guest_session_notes') || '[]');
+
+    if (guestNotes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nessuna nota inviata in questa sessione.</td></tr>';
+      return;
+    }
+
+    guestNotes.forEach(item => {
+      tbody.innerHTML += `<tr>
+        <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
+        <td style="white-space: pre-wrap;">${item.note}</td>
+        <td><span style="color:#27ae60; font-weight:bold;">✓ Inviata al Team</span></td>
+      </tr>`;
+    });
+  }
+
+  // Listener Firestore Inserimenti
   onSnapshot(colRef, (snapshot) => {
     allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderAll();
     renderConsultation();
   });
 
+  // Listener Firestore Agenda
+  onSnapshot(agendaRef, (snapshot) => {
+    allAgenda = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderAgenda();
+    checkTodayAlerts();
+  });
+
   function renderAll() {
+    const monthTotalEl = document.getElementById('monthTotalAll');
+    if (!monthTotalEl) return;
+
     const todayStr = new Date().toISOString().split('T')[0];
     const currentMonthStr = new Date().toISOString().substring(0, 7);
 
@@ -523,29 +750,63 @@
     const currentMonthPaidItems = currentMonthItems.filter(i => i.category !== 'Inserito Non Pagato');
     const monthPaidCount = currentMonthPaidItems.reduce((acc, i) => acc + (i.qty || 1), 0);
 
-    document.getElementById('monthTotalAll').innerText = monthTotalAll;
-    document.getElementById('monthPaidCount').innerText = monthPaidCount;
-    document.getElementById('monthEarnings').innerText = calculateEarnings(monthPaidCount) + ' €';
+    const earningsData = calculateEarnings(monthPaidCount);
 
-    const todayItems = allItems.filter(i => i.date === todayStr).sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+    monthTotalEl.innerText = monthTotalAll;
+    const paidCountEl = document.getElementById('monthPaidCount');
+    if (paidCountEl) paidCountEl.innerText = monthPaidCount;
+    const rateEl = document.getElementById('currentRate');
+    if (rateEl) rateEl.innerText = earningsData.rateText;
+    const earningsEl = document.getElementById('monthEarnings');
+    if (earningsEl) earningsEl.innerText = earningsData.totalEarnings;
+
+    const todayItems = allItems.filter(i => i.date === todayStr).sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
     const todayTbody = document.getElementById('todayTableBody');
-    todayTbody.innerHTML = '';
+    if (todayTbody) {
+      todayTbody.innerHTML = '';
+      todayItems.forEach(item => {
+        todayTbody.innerHTML += `<tr>
+          <td>${item.time}</td>
+          <td>${item.operator}</td>
+          <td>${getBadge(item.category)} ${item.qty && item.qty !== 1 ? `<strong>(x${item.qty})</strong>` : ''}</td>
+          <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
+        </tr>`;
+      });
+    }
+  }
 
-    todayItems.forEach(item => {
-      todayTbody.innerHTML += `<tr>
-        <td>${item.time}</td>
-        <td>${item.operator}</td>
-        <td>${getBadge(item.category)} ${item.qty && item.qty !== 1 ? `<strong>(x${item.qty})</strong>` : ''}</td>
-        <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
-      </tr>`;
-    });
+  function calculateEarnings(paidCount) {
+    let rate = 0.40;
+    if (paidCount >= 2000) rate = 1.20;
+    else if (paidCount >= 1600) rate = 1.00;
+    else if (paidCount >= 1200) rate = 0.80;
+    else if (paidCount >= 800) rate = 0.60;
+    
+    return {
+      rateText: rate.toFixed(2) + ' €',
+      totalEarnings: (paidCount * rate).toFixed(2) + ' €'
+    };
+  }
+
+  function getBadge(cat) {
+    if (cat === 'Inserito Sicuro') return '<span class="badge badge-sicuro">Sicuro</span>';
+    if (cat === 'Inserito Non Sicuro') return '<span class="badge badge-non-sicuro">Non Sicuro</span>';
+    return '<span class="badge badge-non-pagato">Non Pagato</span>';
   }
 
   function renderConsultation() {
-    const filterMonth = document.getElementById('filterMonth').value;
-    const filterDate = document.getElementById('filterDate').value;
-    const filterOperator = document.getElementById('filterOperator').value.trim().toLowerCase();
-    const filterCategory = document.getElementById('filterCategory').value;
+    const tbody = document.getElementById('consultationTableBody');
+    if (!tbody) return;
+
+    const filterMonthEl = document.getElementById('filterMonth');
+    const filterDateEl = document.getElementById('filterDate');
+    const filterOpEl = document.getElementById('filterOperator');
+    const filterCatEl = document.getElementById('filterCategory');
+
+    const filterMonth = filterMonthEl ? filterMonthEl.value : '';
+    const filterDate = filterDateEl ? filterDateEl.value : '';
+    const filterOperator = filterOpEl ? filterOpEl.value.trim().toLowerCase() : '';
+    const filterCategory = filterCatEl ? filterCatEl.value : '';
 
     let filtered = [...allItems];
 
@@ -554,23 +815,17 @@
     if (filterCategory) filtered = filtered.filter(i => i.category === filterCategory);
     if (filterOperator) filtered = filtered.filter(i => i.operator.toLowerCase().includes(filterOperator));
 
-    filtered.sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+    filtered.sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
     const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
     const filteredPaidCount = filtered.filter(i => i.category !== 'Inserito Non Pagato').reduce((acc, i) => acc + (i.qty || 1), 0);
 
-    document.getElementById('filteredTotalCount').innerText = filteredTotalCount;
-    document.getElementById('filteredPaidCount').innerText = filteredPaidCount;
+    const fTot = document.getElementById('filteredTotalCount');
+    if (fTot) fTot.innerText = filteredTotalCount;
+    const fPaid = document.getElementById('filteredPaidCount');
+    if (fPaid) fPaid.innerText = filteredPaidCount;
 
-    const targetMonth = filterMonth || new Date().toISOString().substring(0, 7);
-    const monthPaidItems = allItems.filter(i => i.month === targetMonth && i.category !== 'Inserito Non Pagato');
-    const targetMonthPaidCount = monthPaidItems.reduce((acc, i) => acc + (i.qty || 1), 0);
-
-    document.getElementById('selectedMonthEarnings').innerText = calculateEarnings(targetMonthPaidCount) + ' €';
-
-    const tbody = document.getElementById('consultationTableBody');
     tbody.innerHTML = '';
-
     filtered.forEach(item => {
       const q = item.qty || 1;
       tbody.innerHTML += `<tr>
@@ -583,174 +838,167 @@
     });
   }
 
-  document.getElementById('btnAddSicuro').addEventListener('click', () => addRecord('Inserito Sicuro'));
-  document.getElementById('btnAddNonSicuro').addEventListener('click', () => addRecord('Inserito Non Sicuro'));
-  document.getElementById('btnAddNonPagato').addEventListener('click', () => addRecord('Inserito Non Pagato'));
-
-  document.getElementById('btnApplyBulk').addEventListener('click', () => {
-    const qtyInput = document.getElementById('bulkQty');
-    const qty = parseInt(qtyInput.value);
-    const category = document.getElementById('bulkCategory').value;
-
-    if (isNaN(qty) || qty === 0) {
-      alert("Inserisci un numero valido diverso da zero.");
-      return;
-    }
-    addRecord(category, qty);
-    qtyInput.value = '';
+  // Filtri consultazione interattivi
+  ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderConsultation);
   });
 
-  document.getElementById('btnTabRegistro').addEventListener('click', function() {
-    document.getElementById('registro').classList.add('active');
-    document.getElementById('consultazione').classList.remove('active');
-    this.classList.add('active');
+  document.getElementById('btnResetFilters')?.addEventListener('click', () => {
+    ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    renderConsultation();
+  });
+
+  function renderAgenda() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tbody = document.getElementById('agendaTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const sortedAgenda = [...allAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+
+    sortedAgenda.forEach(item => {
+      let badgeHtml = '';
+      if (item.date === todayStr) {
+        badgeHtml = '<span class="agenda-badge-today">🔔 OGGI</span>';
+      } else if (item.date > todayStr) {
+        badgeHtml = '<span class="agenda-badge-future">PROSSIMO</span>';
+      } else {
+        badgeHtml = '<span class="agenda-badge-past">PASSATO</span>';
+      }
+
+      tbody.innerHTML += `<tr>
+        <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
+        <td>${badgeHtml}</td>
+        <td style="white-space: pre-wrap;">${item.note}</td>
+        <td>${item.operator}</td>
+        <td><button class="btn-complete" onclick="completeAgendaItem('${item.id}')">✓ Task completata</button>
+        </td>
+      </tr>`;
+    });
+  }
+
+  function checkTodayAlerts() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayReminders = allAgenda.filter(a => a.date === todayStr);
+    const banner = document.getElementById('todayReminderBanner');
+    const list = document.getElementById('reminderList');
+
+    if (todayReminders.length > 0 && banner && list) {
+      list.innerHTML = '';
+      todayReminders.forEach(r => {
+        const timeText = r.time ? `(ore ${r.time})` : '';
+        list.innerHTML += `<li><strong>${timeText}</strong> ${r.note} <em>[creato da ${r.operator}]</em></li>`;
+      });
+      
+      const currentRole = OPERATOR_ROLES[localStorage.getItem('logged_operator')] || 'guest';
+      if (currentRole !== 'guest') {
+        banner.style.display = 'block';
+        if (!notifiedToday) {
+          notifiedToday = true;
+          const notesSummary = todayReminders.map(r => `• ${r.time ? '[' + r.time + '] ' : ''}${r.note}`).join('\n');
+          alert(`🔔 PROMEMORIA DI OGGI (${todayStr}):\n\n${notesSummary}`);
+        }
+      } else {
+        banner.style.display = 'none';
+      }
+    } else if (banner) {
+      banner.style.display = 'none';
+    }
+  }
+
+  // Navigazione Tab
+  document.getElementById('btnTabRegistro')?.addEventListener('click', function() {
+    document.getElementById('registro')?.classList.add('active');
+    document.getElementById('consultazione')?.classList.remove('active');
+    document.getElementById('agenda')?.classList.remove('active');
+    document.getElementById('btnTabRegistro').classList.add('active');
     document.getElementById('btnTabConsultazione').classList.remove('active');
     document.getElementById('btnTabAgenda').classList.remove('active');
   });
 
-  document.getElementById('btnTabConsultazione').addEventListener('click', function() {
-    document.getElementById('consultazione').classList.add('active');
-    document.getElementById('registro').classList.remove('active');
-    this.classList.add('active');
+  document.getElementById('btnTabConsultazione')?.addEventListener('click', function() {
+    document.getElementById('consultazione')?.classList.add('active');
+    document.getElementById('registro')?.classList.remove('active');
+    document.getElementById('agenda')?.classList.remove('active');
+    document.getElementById('btnTabConsultazione').classList.add('active');
     document.getElementById('btnTabRegistro').classList.remove('active');
     document.getElementById('btnTabAgenda').classList.remove('active');
     renderConsultation();
   });
 
-  document.getElementById('filterMonth').addEventListener('change', renderConsultation);
-  document.getElementById('filterDate').addEventListener('change', renderConsultation);
-  document.getElementById('filterOperator').addEventListener('input', renderConsultation);
-  document.getElementById('filterCategory').addEventListener('change', renderConsultation);
-
-  document.getElementById('btnResetFilters').addEventListener('click', () => {
-    document.getElementById('filterMonth').value = '';
-    document.getElementById('filterDate').value = '';
-    document.getElementById('filterOperator').value = '';
-    document.getElementById('filterCategory').value = '';
-    renderConsultation();
+  document.getElementById('btnTabAgenda')?.addEventListener('click', function() {
+    document.getElementById('agenda')?.classList.add('active');
+    document.getElementById('registro')?.classList.remove('active');
+    document.getElementById('consultazione')?.classList.remove('active');
+    document.getElementById('btnTabAgenda').classList.add('active');
+    document.getElementById('btnTabRegistro').classList.remove('active');
+    document.getElementById('btnTabConsultazione').classList.remove('active');
+    renderAgenda();
   });
 
-// Funzione per attivare/disattivare la sfocatura al clic dell'occhio
-  window.toggleBlur = function(buttonElement) {
-    const container = buttonElement.parentElement;
-    container.classList.toggle('revealed');
-  };
+  function applyPermissionsByRole(operatorName) {
+    const role = OPERATOR_ROLES[operatorName] || 'guest';
 
-// Eliminazione/Completamento Task
-window.completeAgendaItem = async function(id) {
-  if (confirm("Segnare questo promemoria come completato e rimuoverlo dall'agenda?")) {
-    await deleteDoc(doc(db, "agenda", id));
-  }
-};
+    const container = document.querySelector('.container');
+    if (container) container.style.display = 'block';
 
-// Ascolto DB Agenda
-onSnapshot(agendaRef, (snapshot) => {
-  allAgenda = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  renderAgenda();
-  checkTodayAlerts();
-});
+    const btnRegistro = document.getElementById('btnTabRegistro');
+    const btnConsultazione = document.getElementById('btnTabConsultazione');
+    const btnAgenda = document.getElementById('btnTabAgenda');
+    const btnExport = document.getElementById('btnExport');
 
-// Genera la tabella Agenda
-function renderAgenda() {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tbody = document.getElementById('agendaTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
+    const tabRegistro = document.getElementById('registro');
+    const tabConsultazione = document.getElementById('consultazione');
+    const tabAgenda = document.getElementById('agenda');
 
-  const sortedAgenda = [...allAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+    const disclaimerElement = document.getElementById('disclaimerText');
+    const agendaFormContainer = document.getElementById('agendaFormContainer');
+    const standardNotesContainer = document.getElementById('standardNotesContainer');
+    const guestNotesContainer = document.getElementById('guestNotesContainer');
+    const todayBanner = document.getElementById('todayReminderBanner');
 
-  sortedAgenda.forEach(item => {
-    let badgeHtml = '';
-    if (item.date === todayStr) {
-      badgeHtml = '<span class="agenda-badge-today">🔔 OGGI</span>';
-    } else if (item.date > todayStr) {
-      badgeHtml = '<span class="agenda-badge-future">PROSSIMO</span>';
+    if (role === 'guest') {
+      if (btnRegistro) btnRegistro.style.display = 'none';
+      if (btnConsultazione) btnConsultazione.style.display = 'none';
+      if (btnAgenda) btnAgenda.style.display = 'block';
+      if (btnExport) btnExport.style.display = 'none';
+
+      if (disclaimerElement) disclaimerElement.style.display = 'none';
+      if (todayBanner) todayBanner.style.display = 'none';
+      if (agendaFormContainer) agendaFormContainer.style.display = 'none';
+      if (standardNotesContainer) standardNotesContainer.style.display = 'none';
+
+      if (guestNotesContainer) guestNotesContainer.style.display = 'block';
+      renderGuestSessionNotes();
+
+      if (tabRegistro) tabRegistro.classList.remove('active');
+      if (tabConsultazione) tabConsultazione.classList.remove('active');
+      if (tabAgenda) tabAgenda.classList.add('active');
+
     } else {
-      badgeHtml = '<span class="agenda-badge-past">PASSATO</span>';
+      if (disclaimerElement) disclaimerElement.style.display = 'block';
+      if (agendaFormContainer) agendaFormContainer.style.display = 'block';
+      if (standardNotesContainer) standardNotesContainer.style.display = 'block';
+      if (guestNotesContainer) guestNotesContainer.style.display = 'none';
+
+      if (tabRegistro) tabRegistro.classList.add('active');
+      if (tabConsultazione) tabConsultazione.classList.remove('active');
+      if (tabAgenda) tabAgenda.classList.remove('active');
+
+      if (btnRegistro) btnRegistro.style.display = 'block';
+      if (btnConsultazione) btnConsultazione.style.display = 'block';
+      if (btnAgenda) btnAgenda.style.display = 'block';
+
+      if (role === 'admin') {
+        if (btnExport) btnExport.style.display = 'inline-flex';
+      } else {
+        if (btnExport) btnExport.style.display = 'none';
+      }
     }
-
-    tbody.innerHTML += `<tr>
-      <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
-      <td>${badgeHtml}</td>
-      <td style="white-space: pre-wrap;">${item.note}</td>
-      <td>${item.operator}</td>
-      <td><button class="btn-complete" onclick="completeAgendaItem('${item.id}')">✓ Task completata</button></td>
-    </tr>`;
-  });
-}
-
-// Controllo notifiche di oggi
-function checkTodayAlerts() {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayReminders = allAgenda.filter(a => a.date === todayStr);
-  const banner = document.getElementById('todayReminderBanner');
-  const list = document.getElementById('reminderList');
-
-  if (todayReminders.length > 0 && banner && list) {
-    list.innerHTML = '';
-    todayReminders.forEach(r => {
-      const timeText = r.time ? `(ore ${r.time})` : '';
-      list.innerHTML += `<li><strong>${timeText}</strong> ${r.note} <em>[creato da ${r.operator}]</em></li>`;
-    });
-    banner.style.display = 'block';
-
-    if (!notifiedToday && localStorage.getItem('logged_operator')) {
-      notifiedToday = true;
-      const notesSummary = todayReminders.map(r => `• ${r.time ? '[' + r.time + '] ' : ''}${r.note}`).join('\n');
-      alert(`🔔 PROMEMORIA DI OGGI (${todayStr}):\n\n${notesSummary}`);
-    }
-  } else if (banner) {
-    banner.style.display = 'none';
   }
-}
-
-// Salva nuova nota
-document.getElementById('btnAddAgenda')?.addEventListener('click', async () => {
-  const dateVal = document.getElementById('agendaDate').value;
-  const timeVal = document.getElementById('agendaTime').value;
-  const noteVal = document.getElementById('agendaNote').value.trim();
-  const operator = document.getElementById('operatorName').value;
-
-  if (!operator) return alert("Effettua l'accesso per continuare.");
-  if (!dateVal || !noteVal) return alert("Inserisci almeno la Data e la Nota del promemoria!");
-
-  try {
-    await addDoc(agendaRef, {
-      date: dateVal,
-      time: timeVal || '',
-      note: noteVal,
-      operator: operator,
-      createdAt: new Date().toISOString()
-    });
-
-    document.getElementById('agendaDate').value = '';
-    document.getElementById('agendaTime').value = '';
-    document.getElementById('agendaNote').value = '';
-  } catch(err) {
-    alert("Errore nel salvataggio del promemoria.");
-  }
-});
-
-// Cambio scheda verso Agenda
-document.getElementById('btnTabAgenda')?.addEventListener('click', function() {
-  document.getElementById('agenda').classList.add('active');
-  document.getElementById('registro').classList.remove('active');
-  document.getElementById('consultazione').classList.remove('active');
-  this.classList.add('active');
-  document.getElementById('btnTabRegistro').classList.remove('active');
-  document.getElementById('btnTabConsultazione').classList.remove('active');
-  renderAgenda();
-});
-
-  document.getElementById('btnExport').addEventListener('click', () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allItems, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `backoffice_backup_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-  });
 </script>
 
 </body>
