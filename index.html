@@ -81,7 +81,6 @@
     .btn-counter:active { transform: scale(0.97); }
     .btn-sicuro { background: var(--sicuro); }
     .btn-non-sicuro { background: var(--non-sicuro); }
-    .btn-non-pagato { background: var(--non-pagato); }
 
     .stats-card {
       background: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid var(--primary);
@@ -238,7 +237,6 @@
     <div class="btn-group">
       <button class="btn-counter btn-sicuro" id="btnAddSicuro">+1 Inserito Sicuro</button>
       <button class="btn-counter btn-non-sicuro" id="btnAddNonSicuro">+1 Inserito Non Sicuro</button>
-      <button class="btn-counter btn-non-pagato" id="btnAddNonPagato">+1 Inserito Non Pagato</button>
     </div>
 
     <div class="stats-card">
@@ -591,7 +589,6 @@
 
   document.getElementById('btnAddSicuro')?.addEventListener('click', () => addRecord('Inserito Sicuro', 1));
   document.getElementById('btnAddNonSicuro')?.addEventListener('click', () => addRecord('Inserito Non Sicuro', 1));
-  document.getElementById('btnAddNonPagato')?.addEventListener('click', () => addRecord('Inserito Non Pagato', 1));
 
   document.getElementById('btnApplyBulk')?.addEventListener('click', () => {
     const qtyInput = document.getElementById('bulkQty');
