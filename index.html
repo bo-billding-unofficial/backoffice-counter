@@ -248,9 +248,16 @@
         </div>
       </div>
       <div class="stat-item">
-        <label>Inserimenti Remunerati</label>
+        <label>Totale Inserimenti Sicuri</label>
         <div class="privacy-container">
-          <span id="monthPaidCount" class="blurred-data highlight">0</span>
+          <span id="monthSicuroCount" class="blurred-data highlight">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Totale Inserimenti non Sicuri</label>
+        <div class="privacy-container">
+          <span id="monthNonSicuroCount" class="blurred-data" style="color: var(--non-sicuro);">0</span>
           <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
@@ -738,14 +745,27 @@
     const currentMonthItems = allItems.filter(i => i.month === currentMonthStr);
     const monthTotalAll = currentMonthItems.reduce((acc, i) => acc + (i.qty || 1), 0);
 
+    const monthSicuroCount = currentMonthItems
+      .filter(i => i.category === 'Inserito Sicuro')
+      .reduce((acc, i) => acc + (i.qty || 1), 0);
+
+    const monthNonSicuroCount = currentMonthItems
+      .filter(i => i.category === 'Inserito Non Sicuro')
+      .reduce((acc, i) => acc + (i.qty || 1), 0);
+
     const currentMonthPaidItems = currentMonthItems.filter(i => i.category !== 'Inserito Non Pagato');
     const monthPaidCount = currentMonthPaidItems.reduce((acc, i) => acc + (i.qty || 1), 0);
 
     const earningsData = calculateEarnings(monthPaidCount);
 
     monthTotalEl.innerText = monthTotalAll;
-    const paidCountEl = document.getElementById('monthPaidCount');
-    if (paidCountEl) paidCountEl.innerText = monthPaidCount;
+    
+    const sicuroCountEl = document.getElementById('monthSicuroCount');
+    if (sicuroCountEl) sicuroCountEl.innerText = monthSicuroCount;
+
+    const nonSicuroCountEl = document.getElementById('monthNonSicuroCount');
+    if (nonSicuroCountEl) nonSicuroCountEl.innerText = monthNonSicuroCount;
+
     const rateEl = document.getElementById('currentRate');
     if (rateEl) rateEl.innerText = earningsData.rateText;
     const earningsEl = document.getElementById('monthEarnings');
