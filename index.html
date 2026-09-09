@@ -63,6 +63,10 @@
       font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
     }
     .btn-export { background: #e8f8f5; color: #117a65; border: 1px solid #a3e4d7; }
+    .btn-import { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .btn-import:hover { background: #bae6fd; }
+    .btn-delete-month { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .btn-delete-month:hover { background: #fecaca; }
     .export-select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; }
 
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -130,7 +134,6 @@
       user-select: none;
     }
 
-    /* Rimuove la sfocatura al passaggio del mouse */
     .privacy-container:hover .blurred-data,
     .privacy-container.revealed .blurred-data {
       filter: blur(0);
@@ -161,6 +164,8 @@
 
     /* Form e Tab Agenda */
     .tab-btn.agenda-tab.active { background: #8e44ad; box-shadow: 0 4px 6px rgba(142,68,173,0.3); }
+    .tab-btn.viewer-tab.active { background: #e67e22; box-shadow: 0 4px 6px rgba(230,126,34,0.3); }
+    
     .agenda-form {
       background: #fdf4ff; border: 1px solid #f5d0fe; border-left: 5px solid #8e44ad;
       padding: 20px; border-radius: 8px; margin-bottom: 25px;
@@ -231,10 +236,16 @@
       <button class="btn-logout" id="btnLogout">Esci</button>
     </div>
     <div class="sync-actions">
-      <!-- Mese da esportare specificatamente -->
-      <input type="month" id="exportMonthPicker" class="export-select" title="Seleziona Mese da Esportare">
+      <!-- Mese da gestire -->
+      <input type="month" id="exportMonthPicker" class="export-select" title="Seleziona Mese">
       <button class="btn-sync btn-export" id="btnExport">💾 Esporta JSON Mese</button>
-      <button class="btn-sync btn-export" id="btnExportAll" style="background:#f1f5f9; color:#475569; border-color:#cbd5e1;">💾 Esporta Tutti i Dati</button>
+      
+      <!-- PULSANTE IMPORTA JSON PER CONSULTAZIONE TEMPORANEA (VISIBILE PER OPERATORE E ADMIN) -->
+      <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+      <button class="btn-sync btn-import" id="btnTriggerImport">📂 Carica JSON (Visualizza)</button>
+      
+      <!-- PULSANTE ELIMINA MESE SOLO PER ADMIN -->
+      <button class="btn-sync btn-delete-month" id="btnDeleteMonth">🗑️ Elimina Mese</button>
     </div>
   </div>
 
@@ -242,6 +253,7 @@
     <button class="tab-btn active" id="btnTabRegistro">📥 Inserimento Rapido</button>
     <button class="tab-btn" id="btnTabConsultazione">🗃️ Consultazione & Archivio</button>
     <button class="tab-btn agenda-tab" id="btnTabAgenda">📅 Agenda & Promemoria</button>
+    <button class="tab-btn viewer-tab" id="btnTabViewer" style="display: none;">📊 Visto da JSON (Temporaneo)</button>
   </div>
 
   <!-- TAB 1: REGISTRO -->
@@ -345,16 +357,23 @@
 
     <div class="stats-card" style="border-left-color: #27ae60;">
       <div class="stat-item">
-        <label>Totale Inserimenti Filtrati</label>
+        <label>Totale Inserimenti Mese</label>
         <div class="privacy-container">
           <span id="filteredTotalCount" class="blurred-data">0</span>
           <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
       <div class="stat-item">
-        <label>Inserimenti Remunerati Filtrati</label>
+        <label>Totale Inserimenti Sicuri</label>
         <div class="privacy-container">
-          <span id="filteredPaidCount" class="highlight blurred-data">0</span>
+          <span id="filteredSicuroCount" class="blurred-data highlight">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Totale Inserimenti non Sicuri</label>
+        <div class="privacy-container">
+          <span id="filteredNonSicuroCount" class="blurred-data" style="color: var(--non-sicuro);">0</span>
           <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
@@ -371,6 +390,84 @@
         </tr>
       </thead>
       <tbody id="consultationTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- TAB SPECIAL: VISTO DA JSON TEMPORANEO -->
+  <div id="tabViewer" class="tab-content">
+    <div style="background: #fff3cd; border: 1px solid #ffe8a1; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13.5px; color: #856404;">
+      ℹ️ <strong>Modalità Consultazione Temporanea File JSON:</strong> I dati visualizzati in questa schermata provengono esclusivamente dal file caricato e <u>NON sono stati salvati</u> nel database.
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <label>Giorno</label>
+        <input type="date" id="viewerFilterDate">
+      </div>
+      <div class="filter-group">
+        <label>Operatore</label>
+        <input type="text" id="viewerFilterOperator" placeholder="Nome operatore...">
+      </div>
+      <div class="filter-group">
+        <label>Categoria</label>
+        <select id="viewerFilterCategory">
+          <option value="">Tutte</option>
+          <option value="Inserito Sicuro">Inserito Sicuro</option>
+          <option value="Inserito Non Sicuro">Inserito Non Sicuro</option>
+          <option value="Inserito Non Pagato">Inserito Non Pagato</option>
+        </select>
+      </div>
+      <button class="btn-reset" id="btnViewerResetFilters">Resetta Filtri</button>
+    </div>
+
+    <div class="stats-card" style="border-left-color: #e67e22;">
+      <div class="stat-item">
+        <label>Totale Inserimenti Mese</label>
+        <div class="privacy-container">
+          <span id="viewerTotalCount" class="blurred-data">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Totale Inserimenti Sicuri</label>
+        <div class="privacy-container">
+          <span id="viewerSicuroCount" class="blurred-data highlight">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Totale Inserimenti non Sicuri</label>
+        <div class="privacy-container">
+          <span id="viewerNonSicuroCount" class="blurred-data" style="color: var(--non-sicuro);">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Scaglione Attuale</label>
+        <div class="privacy-container">
+          <span id="viewerRate" class="blurred-data" style="color: #8e44ad;">0.40 €</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Guadagno Lordo Team Stimato</label>
+        <div class="privacy-container">
+          <span id="viewerEarnings" class="blurred-data money">0.00 €</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Data e Ora</th>
+          <th>Operatore</th>
+          <th>Categoria</th>
+          <th>Quantità</th>
+        </tr>
+      </thead>
+      <tbody id="viewerTableBody"></tbody>
     </table>
   </div>
 
@@ -463,7 +560,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } 
+  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs } 
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const OPERATOR_PASSWORDS = {
@@ -495,6 +592,7 @@
   let allAgenda = [];
   let notifiedToday = false;
   let allItems = [];
+  let temporaryJsonItems = []; // Memorizza i dati caricati dal file JSON per la consultazione temporanea
   let showCompletedTasks = false;
 
   const loginModal = document.getElementById('loginModal');
@@ -728,13 +826,90 @@
     downloadJSON(filteredByMonth, `export_inserimenti_${selectedMonth}.json`);
   });
 
-  // Esportazione TOTALE
-  document.getElementById('btnExportAll')?.addEventListener('click', () => {
-    if (allItems.length === 0) {
-      alert("Nessun dato presente nel database.");
+  // GESTIONE CARICAMENTO JSON E CONSULTAZIONE TEMPORANEA
+  const importInput = document.getElementById('importJsonInput');
+  
+  document.getElementById('btnTriggerImport')?.addEventListener('click', () => {
+    importInput?.click();
+  });
+
+  importInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const json = JSON.parse(event.target.result);
+        if (!Array.isArray(json)) {
+          alert("Formato JSON non valido! Il file deve contenere un array di oggetti.");
+          return;
+        }
+
+        temporaryJsonItems = json;
+        
+        // Mostra la tab del Visualizzatore Temporaneo ed effettua lo switch
+        const btnTabViewer = document.getElementById('btnTabViewer');
+        if (btnTabViewer) btnTabViewer.style.display = 'block';
+
+        switchTab('tabViewer', btnTabViewer);
+        renderViewerConsultation();
+        alert(`File caricato con successo! Trovati ${temporaryJsonItems.length} record. Stai consultando i dati in modalità temporanea.`);
+
+      } catch (err) {
+        console.error(err);
+        alert("Errore nella lettura del file JSON. Assicurati che sia un file JSON valido.");
+      }
+    };
+    reader.readAsText(file);
+    // Azzera l'input file per permettere la re-selezione dello stesso file
+    e.target.value = '';
+  });
+
+  // ELIMINAZIONE DI UN MESE SPECIFICO (SOLO PER ADMIN)
+  document.getElementById('btnDeleteMonth')?.addEventListener('click', async () => {
+    const currentOp = localStorage.getItem('logged_operator');
+    const role = OPERATOR_ROLES[currentOp];
+
+    if (role !== 'admin') {
+      alert("Solamente l'amministratore ha i permessi per eliminare i dati di un intero mese!");
       return;
     }
-    downloadJSON(allItems, `export_inserimenti_TOTALE_${new Date().toISOString().split('T')[0]}.json`);
+
+    const selectedMonth = document.getElementById('exportMonthPicker')?.value;
+    if (!selectedMonth) {
+      alert("Seleziona prima dal campo data il mese che desideri eliminare!");
+      return;
+    }
+
+    const confirmText = prompt(`⚠️ ATTENZIONE: Questa azione cancellerà DEFINITIVAMENTE tutti gli inserimenti del mese ${selectedMonth}.\n\nPer confermare l'eliminazione, digita esattamente "${selectedMonth}" nel campo sottostante:`);
+
+    if (confirmText !== selectedMonth) {
+      alert("Cancellazione annullata. Il testo inserito non corrisponde al mese selezionato.");
+      return;
+    }
+
+    try {
+      const q = query(colRef, where("month", "==", selectedMonth));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        alert(`Nessun dato trovato nel database per il mese ${selectedMonth}.`);
+        return;
+      }
+
+      const batch = writeBatch(db);
+      querySnapshot.forEach((documento) => {
+        batch.delete(doc(db, "inserimenti", documento.id));
+      });
+
+      await batch.commit();
+      alert(`Tutti i dati degli inserimenti per il mese ${selectedMonth} sono stati eliminati con successo!`);
+
+    } catch (err) {
+      console.error(err);
+      alert("Si è verificato un errore durante l'eliminazione dei dati del mese.");
+    }
   });
 
   async function submitGuestNote() {
@@ -916,12 +1091,15 @@
     filtered.sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
     const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
-    const filteredPaidCount = filtered.filter(i => i.category !== 'Inserito Non Pagato').reduce((acc, i) => acc + (i.qty || 1), 0);
+    const filteredSicuroCount = filtered.filter(i => i.category === 'Inserito Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+    const filteredNonSicuroCount = filtered.filter(i => i.category === 'Inserito Non Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
 
     const fTot = document.getElementById('filteredTotalCount');
     if (fTot) fTot.innerText = filteredTotalCount;
-    const fPaid = document.getElementById('filteredPaidCount');
-    if (fPaid) fPaid.innerText = filteredPaidCount;
+    const fSic = document.getElementById('filteredSicuroCount');
+    if (fSic) fSic.innerText = filteredSicuroCount;
+    const fNSic = document.getElementById('filteredNonSicuroCount');
+    if (fNSic) fNSic.innerText = filteredNonSicuroCount;
 
     tbody.innerHTML = '';
     filtered.forEach(item => {
@@ -935,6 +1113,64 @@
       </tr>`;
     });
   }
+
+  // RENDER PER IL VISUALIZZATORE DEL FILE JSON TEMPORANEO
+  function renderViewerConsultation() {
+    const tbody = document.getElementById('viewerTableBody');
+    if (!tbody) return;
+
+    const filterDateVal = document.getElementById('viewerFilterDate')?.value || '';
+    const filterOpVal = document.getElementById('viewerFilterOperator')?.value.trim().toLowerCase() || '';
+    const filterCatVal = document.getElementById('viewerFilterCategory')?.value || '';
+
+    let filtered = [...temporaryJsonItems];
+
+    if (filterDateVal) filtered = filtered.filter(i => i.date === filterDateVal);
+    if (filterCatVal) filtered = filtered.filter(i => i.category === filterCatVal);
+    if (filterOpVal) filtered = filtered.filter(i => i.operator && i.operator.toLowerCase().includes(filterOpVal));
+
+    filtered.sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+    const totalQty = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
+    const sicuroQty = filtered.filter(i => i.category === 'Inserito Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+    const nonSicuroQty = filtered.filter(i => i.category === 'Inserito Non Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+    const paidQty = filtered.filter(i => i.category !== 'Inserito Non Pagato').reduce((acc, i) => acc + (i.qty || 1), 0);
+    const earnings = calculateEarnings(paidQty);
+
+    document.getElementById('viewerTotalCount').innerText = totalQty;
+    document.getElementById('viewerSicuroCount').innerText = sicuroQty;
+    document.getElementById('viewerNonSicuroCount').innerText = nonSicuroQty;
+    document.getElementById('viewerRate').innerText = earnings.rateText;
+    document.getElementById('viewerEarnings').innerText = earnings.totalEarnings;
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">Nessun dato corrispondente ai filtri selezioni.</td></tr>';
+      return;
+    }
+
+    filtered.forEach(item => {
+      const q = item.qty || 1;
+      tbody.innerHTML += `<tr>
+        <td>${item.date || ''} ${item.time || ''}</td>
+        <td>${item.operator || ''}</td>
+        <td>${getBadge(item.category)}</td>
+        <td>${q > 0 ? '+' + q : q}</td>
+      </tr>`;
+    });
+  }
+
+  ['viewerFilterDate', 'viewerFilterOperator', 'viewerFilterCategory'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', renderViewerConsultation);
+  });
+
+  document.getElementById('btnViewerResetFilters')?.addEventListener('click', () => {
+    ['viewerFilterDate', 'viewerFilterOperator', 'viewerFilterCategory'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    renderViewerConsultation();
+  });
 
   ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', renderConsultation);
@@ -954,7 +1190,6 @@
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // Filtra in base al flag showCompletedTasks
     let filteredAgenda = allAgenda.filter(item => showCompletedTasks ? true : !item.completed);
 
     const sortedAgenda = [...filteredAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
@@ -996,7 +1231,6 @@
 
   function checkTodayAlerts() {
     const todayStr = new Date().toISOString().split('T')[0];
-    // Notifica solo le task non ancora completate
     const todayReminders = allAgenda.filter(a => a.date === todayStr && !a.completed);
     const banner = document.getElementById('todayReminderBanner');
     const list = document.getElementById('reminderList');
@@ -1024,34 +1258,42 @@
     }
   }
 
-  // Navigazione Tab
+  // NAVIGAZIONE TAB
+  function switchTab(activeTabId, activeBtnEl) {
+    const tabs = ['registro', 'consultazione', 'agenda', 'tabViewer'];
+    const btns = ['btnTabRegistro', 'btnTabConsultazione', 'btnTabAgenda', 'btnTabViewer'];
+
+    tabs.forEach(t => {
+      const el = document.getElementById(t);
+      if (el) el.classList.remove('active');
+    });
+
+    btns.forEach(b => {
+      const el = document.getElementById(b);
+      if (el) el.classList.remove('active');
+    });
+
+    document.getElementById(activeTabId)?.classList.add('active');
+    if (activeBtnEl) activeBtnEl.classList.add('active');
+  }
+
   document.getElementById('btnTabRegistro')?.addEventListener('click', function() {
-    document.getElementById('registro')?.classList.add('active');
-    document.getElementById('consultazione')?.classList.remove('active');
-    document.getElementById('agenda')?.classList.remove('active');
-    document.getElementById('btnTabRegistro').classList.add('active');
-    document.getElementById('btnTabConsultazione').classList.remove('active');
-    document.getElementById('btnTabAgenda').classList.remove('active');
+    switchTab('registro', this);
   });
 
   document.getElementById('btnTabConsultazione')?.addEventListener('click', function() {
-    document.getElementById('consultazione')?.classList.add('active');
-    document.getElementById('registro')?.classList.remove('active');
-    document.getElementById('agenda')?.classList.remove('active');
-    document.getElementById('btnTabConsultazione').classList.add('active');
-    document.getElementById('btnTabRegistro').classList.remove('active');
-    document.getElementById('btnTabAgenda').classList.remove('active');
+    switchTab('consultazione', this);
     renderConsultation();
   });
 
   document.getElementById('btnTabAgenda')?.addEventListener('click', function() {
-    document.getElementById('agenda')?.classList.add('active');
-    document.getElementById('registro')?.classList.remove('active');
-    document.getElementById('consultazione')?.classList.remove('active');
-    document.getElementById('btnTabAgenda').classList.add('active');
-    document.getElementById('btnTabRegistro').classList.remove('active');
-    document.getElementById('btnTabConsultazione').classList.remove('active');
+    switchTab('agenda', this);
     renderAgenda();
+  });
+
+  document.getElementById('btnTabViewer')?.addEventListener('click', function() {
+    switchTab('tabViewer', this);
+    renderViewerConsultation();
   });
 
   function applyPermissionsByRole(operatorName) {
@@ -1067,7 +1309,8 @@
     const btnConsultazione = document.getElementById('btnTabConsultazione');
     const btnAgenda = document.getElementById('btnTabAgenda');
     const btnExport = document.getElementById('btnExport');
-    const btnExportAll = document.getElementById('btnExportAll');
+    const btnTriggerImport = document.getElementById('btnTriggerImport');
+    const btnDeleteMonth = document.getElementById('btnDeleteMonth');
     const exportMonthPicker = document.getElementById('exportMonthPicker');
 
     const tabRegistro = document.getElementById('registro');
@@ -1085,7 +1328,8 @@
       if (mainTabsBar) mainTabsBar.style.display = 'none';
       if (disclaimerElement) disclaimerElement.style.display = 'none';
       if (btnExport) btnExport.style.display = 'none';
-      if (btnExportAll) btnExportAll.style.display = 'none';
+      if (btnTriggerImport) btnTriggerImport.style.display = 'none';
+      if (btnDeleteMonth) btnDeleteMonth.style.display = 'none';
       if (exportMonthPicker) exportMonthPicker.style.display = 'none';
 
       if (agendaFormContainer) agendaFormContainer.style.display = 'block';
@@ -1100,7 +1344,6 @@
       return;
     }
 
-    // Per gli altri utenti ripristina la visibilità del titolo e delle tab
     if (headerTitleBlock) headerTitleBlock.style.display = 'block';
     if (mainTabsBar) mainTabsBar.style.display = 'flex';
 
@@ -1109,7 +1352,8 @@
       if (btnConsultazione) btnConsultazione.style.display = 'none';
       if (btnAgenda) btnAgenda.style.display = 'block';
       if (btnExport) btnExport.style.display = 'none';
-      if (btnExportAll) btnExportAll.style.display = 'none';
+      if (btnTriggerImport) btnTriggerImport.style.display = 'none';
+      if (btnDeleteMonth) btnDeleteMonth.style.display = 'none';
       if (exportMonthPicker) exportMonthPicker.style.display = 'none';
 
       if (disclaimerElement) disclaimerElement.style.display = 'none';
@@ -1138,13 +1382,17 @@
       if (btnConsultazione) btnConsultazione.style.display = 'block';
       if (btnAgenda) btnAgenda.style.display = 'block';
 
+      // Funzione Carica JSON Abilitata sia per Operatore che per Admin
+      if (btnTriggerImport) btnTriggerImport.style.display = 'inline-flex';
+
+      // Gestione Funzionalità Esclusive Admin (Armando)
       if (role === 'admin') {
         if (btnExport) btnExport.style.display = 'inline-flex';
-        if (btnExportAll) btnExportAll.style.display = 'inline-flex';
+        if (btnDeleteMonth) btnDeleteMonth.style.display = 'inline-flex';
         if (exportMonthPicker) exportMonthPicker.style.display = 'inline-flex';
       } else {
         if (btnExport) btnExport.style.display = 'none';
-        if (btnExportAll) btnExportAll.style.display = 'none';
+        if (btnDeleteMonth) btnDeleteMonth.style.display = 'none';
         if (exportMonthPicker) exportMonthPicker.style.display = 'none';
       }
     }
