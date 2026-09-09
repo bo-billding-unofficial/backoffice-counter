@@ -173,13 +173,21 @@
     .btn-agenda { background: #8e44ad; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .btn-agenda:hover { background: #762697; }
 
-    /* Pulsante Task Completata */
-    .btn-complete { background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    /* Pulsante Task Completata & Ripristina */
+    .btn-complete { background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; margin-right: 5px; }
     .btn-complete:hover { background: #bbf7d0; }
+    .btn-restore { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; margin-right: 5px; }
+    .btn-restore:hover { background: #bae6fd; }
+    .btn-toggle-completed { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn-toggle-completed:hover { background: #e2e8f0; }
+
+    .agenda-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+    .completed-task-text { text-decoration: line-through; color: #94a3b8; }
 
     .agenda-badge-today { background: #fef08a; color: #854d0e; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
     .agenda-badge-future { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
     .agenda-badge-past { background: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+    .agenda-badge-completed { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
 
     .footer-info { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
   </style>
@@ -425,7 +433,10 @@
 
     <!-- Contenitore Promemoria Globali -->
     <div id="standardNotesContainer">
-      <h3>Elenco Promemoria & Note</h3>
+      <div class="agenda-header-actions">
+        <h3 style="margin:0;">Elenco Promemoria & Note</h3>
+        <button class="btn-toggle-completed" id="btnToggleCompleted">👁️ Mostra Task Completate</button>
+      </div>
       <table>
         <thead>
           <tr>
@@ -448,7 +459,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } 
+  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } 
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const OPERATOR_PASSWORDS = {
@@ -480,6 +491,7 @@
   let allAgenda = [];
   let notifiedToday = false;
   let allItems = [];
+  let showCompletedTasks = false;
 
   const loginModal = document.getElementById('loginModal');
   const loggedUser = localStorage.getItem('logged_operator');
@@ -510,16 +522,53 @@
     }
   };
 
+  // Marca una task come completata nel database
   window.completeAgendaItem = async function(id) {
-    if (confirm("Segnare questo promemoria come completato ed eliminarlo?")) {
+    try {
+      await updateDoc(doc(db, "agenda", id), {
+        completed: true,
+        completedAt: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante il completamento del promemoria.");
+    }
+  };
+
+  // Ripristina una task completata portandola allo stato attivo
+  window.restoreAgendaItem = async function(id) {
+    try {
+      await updateDoc(doc(db, "agenda", id), {
+        completed: false,
+        completedAt: null
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante il ripristino del promemoria.");
+    }
+  };
+
+  // Eliminazione definitiva di un promemoria dall'agenda
+  window.deleteAgendaItem = async function(id) {
+    if (confirm("Sei sicuro di voler eliminare definitivamente questo promemoria?")) {
       try {
         await deleteDoc(doc(db, "agenda", id));
       } catch (err) {
         console.error(err);
-        alert("Errore durante il completamento del promemoria.");
+        alert("Errore durante l'eliminazione del promemoria.");
       }
     }
   };
+
+  // Gestione pulsante Mostra / Nascondi Completate
+  document.getElementById('btnToggleCompleted')?.addEventListener('click', () => {
+    showCompletedTasks = !showCompletedTasks;
+    const btn = document.getElementById('btnToggleCompleted');
+    if (btn) {
+      btn.innerText = showCompletedTasks ? "🙈 Nascondi Task Completate" : "👁️ Mostra Task Completate";
+    }
+    renderAgenda();
+  });
 
   if (loggedUser) {
     const opInput = document.getElementById('operatorName');
@@ -628,6 +677,7 @@
         time: timeVal || '',
         note: noteVal,
         operator: operator,
+        completed: false,
         createdAt: new Date().toISOString()
       });
 
@@ -675,6 +725,7 @@
         time: timeVal || '',
         note: noteVal,
         operator: operatorName,
+        completed: false,
         createdAt: new Date().toISOString()
       });
 
@@ -867,11 +918,21 @@
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const sortedAgenda = [...allAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+    // Filtra in base al flag showCompletedTasks
+    let filteredAgenda = allAgenda.filter(item => showCompletedTasks ? true : !item.completed);
+
+    const sortedAgenda = [...filteredAgenda].sort((a,b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
+
+    if (sortedAgenda.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8;">${showCompletedTasks ? 'Nessun promemoria trovato.' : 'Nessuna task attiva.'}</td></tr>`;
+      return;
+    }
 
     sortedAgenda.forEach(item => {
       let badgeHtml = '';
-      if (item.date === todayStr) {
+      if (item.completed) {
+        badgeHtml = '<span class="agenda-badge-completed">✓ COMPLETATO</span>';
+      } else if (item.date === todayStr) {
         badgeHtml = '<span class="agenda-badge-today">🔔 OGGI</span>';
       } else if (item.date > todayStr) {
         badgeHtml = '<span class="agenda-badge-future">PROSSIMO</span>';
@@ -879,20 +940,28 @@
         badgeHtml = '<span class="agenda-badge-past">PASSATO</span>';
       }
 
+      const noteStyle = item.completed ? 'class="completed-task-text" style="white-space: pre-wrap;"' : 'style="white-space: pre-wrap;"';
+
+      const actionsHtml = item.completed 
+        ? `<button class="btn-restore" onclick="restoreAgendaItem('${item.id}')">↩️ Ripristina</button>
+           <button class="btn-delete" onclick="deleteAgendaItem('${item.id}')">Elimina</button>`
+        : `<button class="btn-complete" onclick="completeAgendaItem('${item.id}')">✓ Task completata</button>
+           <button class="btn-delete" onclick="deleteAgendaItem('${item.id}')">Elimina</button>`;
+
       tbody.innerHTML += `<tr>
         <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
         <td>${badgeHtml}</td>
-        <td style="white-space: pre-wrap;">${item.note}</td>
+        <td ${noteStyle}>${item.note}</td>
         <td>${item.operator}</td>
-        <td><button class="btn-complete" onclick="completeAgendaItem('${item.id}')">✓ Task completata</button>
-        </td>
+        <td>${actionsHtml}</td>
       </tr>`;
     });
   }
 
   function checkTodayAlerts() {
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayReminders = allAgenda.filter(a => a.date === todayStr);
+    // Notifica solo le task non ancora completate
+    const todayReminders = allAgenda.filter(a => a.date === todayStr && !a.completed);
     const banner = document.getElementById('todayReminderBanner');
     const list = document.getElementById('reminderList');
 
