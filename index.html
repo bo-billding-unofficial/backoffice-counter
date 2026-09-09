@@ -460,7 +460,7 @@
   const OPERATOR_ROLES = {
     "Armando": "admin",
     "Claudio": "operatore",
-    "Daniele": "daniele",
+    "Daniele": "admin",
     "Guest": "guest"
   };
 
@@ -973,8 +973,7 @@
     const guestNotesContainer = document.getElementById('guestNotesContainer');
     const todayBanner = document.getElementById('todayReminderBanner');
 
-    // LOGICA PER DANIELE (Non legge la barra/titolo dell'inserimento backoffice, vede solo Agenda)
-    if (role === 'daniele') {
+    if (role === 'soloagenda') {
       if (headerTitleBlock) headerTitleBlock.style.display = 'none';
       if (mainTabsBar) mainTabsBar.style.display = 'none';
       if (disclaimerElement) disclaimerElement.style.display = 'none';
