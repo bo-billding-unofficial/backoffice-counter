@@ -108,6 +108,8 @@
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
     .filter-group label { font-size: 12px; font-weight: 600; color: #64748b; }
     .filters input, .filters select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; background: white; }
+    .btn-search { padding: 8px 14px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; }
+    .btn-search:hover { background: var(--primary-dark); }
     .btn-reset { padding: 8px 12px; background: #94a3b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -351,6 +353,7 @@
           <option value="Inserito Non Pagato">Inserito Non Pagato</option>
         </select>
       </div>
+      <button class="btn-search" id="btnSearchConsultation">🔍 Cerca</button>
       <button class="btn-reset" id="btnResetFilters">Resetta Filtri</button>
     </div>
 
@@ -388,7 +391,13 @@
           <th>Azione</th>
         </tr>
       </thead>
-      <tbody id="consultationTableBody"></tbody>
+      <tbody id="consultationTableBody">
+        <tr>
+          <td colspan="5" style="text-align:center; color:#64748b; padding:20px;">
+            ⚠️ Seleziona almeno un filtro (Mese, Giorno, Operatore o Categoria) e clicca su <strong>🔍 Cerca</strong> per caricare i dati.
+          </td>
+        </tr>
+      </tbody>
     </table>
   </div>
 
@@ -559,7 +568,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs } 
+  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs, limit } 
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const OPERATOR_PASSWORDS = {
@@ -621,6 +630,8 @@
     if (confirm("Sei sicuro di voler cancellare questo inserimento?")) {
       try {
         await deleteDoc(doc(db, "inserimenti", id));
+        // Se si cancella un record dalla scheda consultazione, ricarica la ricerca attiva
+        searchConsultation();
       } catch (err) {
         console.error(err);
         alert("Errore durante la cancellazione.");
@@ -987,7 +998,6 @@
   onSnapshot(colRef, (snapshot) => {
     allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderAll();
-    renderConsultation();
   });
 
   onSnapshot(agendaRef, (snapshot) => {
@@ -1066,52 +1076,89 @@
     return '<span class="badge badge-non-pagato">Non Pagato</span>';
   }
 
-  function renderConsultation() {
+  // NUOVA FUNZIONE CONSULTAZIONE SU RICHIESTA VIA QUERY FIRESTORE
+  async function searchConsultation() {
     const tbody = document.getElementById('consultationTableBody');
     if (!tbody) return;
 
-    const filterMonthEl = document.getElementById('filterMonth');
-    const filterDateEl = document.getElementById('filterDate');
-    const filterOpEl = document.getElementById('filterOperator');
-    const filterCatEl = document.getElementById('filterCategory');
+    const filterMonth = document.getElementById('filterMonth')?.value || '';
+    const filterDate = document.getElementById('filterDate')?.value || '';
+    const filterOperator = document.getElementById('filterOperator')?.value.trim().toLowerCase() || '';
+    const filterCategory = document.getElementById('filterCategory')?.value || '';
 
-    const filterMonth = filterMonthEl ? filterMonthEl.value : '';
-    const filterDate = filterDateEl ? filterDateEl.value : '';
-    const filterOperator = filterOpEl ? filterOpEl.value.trim().toLowerCase() : '';
-    const filterCategory = filterCatEl ? filterCatEl.value : '';
+    // Se nessun filtro è compilato, blocca la ricerca e avvisa l'utente
+    if (!filterMonth && !filterDate && !filterOperator && !filterCategory) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b; padding:20px;">⚠️ Seleziona almeno un filtro (Mese, Giorno, Operatore o Categoria) e clicca su <strong>🔍 Cerca</strong> per visualizzare i dati.</td></tr>';
+      document.getElementById('filteredTotalCount').innerText = '0';
+      document.getElementById('filteredSicuroCount').innerText = '0';
+      document.getElementById('filteredNonSicuroCount').innerText = '0';
+      return;
+    }
 
-    let filtered = [...allItems];
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">⌛ Caricamento dati in corso...</td></tr>';
 
-    if (filterMonth) filtered = filtered.filter(i => i.month === filterMonth);
-    if (filterDate) filtered = filtered.filter(i => i.date === filterDate);
-    if (filterCategory) filtered = filtered.filter(i => i.category === filterCategory);
-    if (filterOperator) filtered = filtered.filter(i => i.operator.toLowerCase().includes(filterOperator));
+    try {
+      let queryConstraints = [];
 
-    filtered.sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+      if (filterMonth) queryConstraints.push(where("month", "==", filterMonth));
+      if (filterDate) queryConstraints.push(where("date", "==", filterDate));
+      if (filterCategory) queryConstraints.push(where("category", "==", filterCategory));
 
-    const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
-    const filteredSicuroCount = filtered.filter(i => i.category === 'Inserito Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
-    const filteredNonSicuroCount = filtered.filter(i => i.category === 'Inserito Non Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+      // Limita la risposta ai primi 300 record per garantire velocità elevata
+      queryConstraints.push(limit(300));
 
-    const fTot = document.getElementById('filteredTotalCount');
-    if (fTot) fTot.innerText = filteredTotalCount;
-    const fSic = document.getElementById('filteredSicuroCount');
-    if (fSic) fSic.innerText = filteredSicuroCount;
-    const fNSic = document.getElementById('filteredNonSicuroCount');
-    if (fNSic) fNSic.innerText = filteredNonSicuroCount;
+      const q = query(colRef, ...queryConstraints);
+      const querySnapshot = await getDocs(q);
 
-    tbody.innerHTML = '';
-    filtered.forEach(item => {
-      const q = item.qty || 1;
-      tbody.innerHTML += `<tr>
-        <td>${item.date} ${item.time}</td>
-        <td>${item.operator}</td>
-        <td>${getBadge(item.category)}</td>
-        <td>${q > 0 ? '+' + q : q}</td>
-        <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
-      </tr>`;
-    });
+      let filtered = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Filtro per nome operatore (in memoria sui record filtrati da Firestore)
+      if (filterOperator) {
+        filtered = filtered.filter(i => i.operator && i.operator.toLowerCase().includes(filterOperator));
+      }
+
+      filtered.sort((a,b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+
+      const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
+      const filteredSicuroCount = filtered.filter(i => i.category === 'Inserito Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+      const filteredNonSicuroCount = filtered.filter(i => i.category === 'Inserito Non Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+
+      document.getElementById('filteredTotalCount').innerText = filteredTotalCount;
+      document.getElementById('filteredSicuroCount').innerText = filteredSicuroCount;
+      document.getElementById('filteredNonSicuroCount').innerText = filteredNonSicuroCount;
+
+      tbody.innerHTML = '';
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">Nessun dato trovato per i filtri selezionati.</td></tr>';
+        return;
+      }
+
+      filtered.forEach(item => {
+        const q = item.qty || 1;
+        tbody.innerHTML += `<tr>
+          <td>${item.date} ${item.time}</td>
+          <td>${item.operator}</td>
+          <td>${getBadge(item.category)}</td>
+          <td>${q > 0 ? '+' + q : q}</td>
+          <td><button class="btn-delete" onclick="deleteRecord('${item.id}', '${item.operator}')">Cancella</button></td>
+        </tr>`;
+      });
+
+    } catch (err) {
+      console.error("Errore durante la consultazione:", err);
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#dc2626; padding:20px;">Errore durante il recupero dei dati. Controlla la console.</td></tr>';
+    }
   }
+
+  document.getElementById('btnSearchConsultation')?.addEventListener('click', searchConsultation);
+
+  document.getElementById('btnResetFilters')?.addEventListener('click', () => {
+    ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    searchConsultation();
+  });
 
   // RENDER PER IL VISUALIZZATORE DEL FILE JSON TEMPORANEO
   function renderViewerConsultation() {
@@ -1169,18 +1216,6 @@
       if (el) el.value = '';
     });
     renderViewerConsultation();
-  });
-
-  ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', renderConsultation);
-  });
-
-  document.getElementById('btnResetFilters')?.addEventListener('click', () => {
-    ['filterMonth', 'filterDate', 'filterOperator', 'filterCategory'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    renderConsultation();
   });
 
   function renderAgenda() {
@@ -1282,7 +1317,6 @@
 
   document.getElementById('btnTabConsultazione')?.addEventListener('click', function() {
     switchTab('consultazione', this);
-    renderConsultation();
   });
 
   document.getElementById('btnTabAgenda')?.addEventListener('click', function() {
