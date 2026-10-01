@@ -350,7 +350,6 @@
           <option value="">Tutte</option>
           <option value="Inserito Sicuro">Inserito Sicuro</option>
           <option value="Inserito Non Sicuro">Inserito Non Sicuro</option>
-          <option value="Inserito Non Pagato">Inserito Non Pagato</option>
         </select>
       </div>
       <button class="btn-search" id="btnSearchConsultation">🔍 Cerca</button>
@@ -376,6 +375,20 @@
         <label>Totale Inserimenti non Sicuri</label>
         <div class="privacy-container">
           <span id="filteredNonSicuroCount" class="blurred-data" style="color: var(--non-sicuro);">0</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Scaglione Attuale</label>
+        <div class="privacy-container">
+          <span id="filteredCurrentRate" class="blurred-data" style="color: #8e44ad;">0.40 €</span>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
+        </div>
+      </div>
+      <div class="stat-item">
+        <label>Guadagno Lordo Team Stimato</label>
+        <div class="privacy-container">
+          <span id="filteredMonthEarnings" class="blurred-data money">0.00 €</span>
           <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
@@ -422,7 +435,6 @@
           <option value="">Tutte</option>
           <option value="Inserito Sicuro">Inserito Sicuro</option>
           <option value="Inserito Non Sicuro">Inserito Non Sicuro</option>
-          <option value="Inserito Non Pagato">Inserito Non Pagato</option>
         </select>
       </div>
       <button class="btn-reset" id="btnViewerResetFilters">Resetta Filtri</button>
@@ -568,7 +580,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs, limit } 
+  import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs } 
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const OPERATOR_PASSWORDS = {
@@ -1092,6 +1104,8 @@
       document.getElementById('filteredTotalCount').innerText = '0';
       document.getElementById('filteredSicuroCount').innerText = '0';
       document.getElementById('filteredNonSicuroCount').innerText = '0';
+      document.getElementById('filteredCurrentRate').innerText = '0.40 €';
+      document.getElementById('filteredMonthEarnings').innerText = '0.00 €';
       return;
     }
 
@@ -1103,9 +1117,6 @@
       if (filterMonth) queryConstraints.push(where("month", "==", filterMonth));
       if (filterDate) queryConstraints.push(where("date", "==", filterDate));
       if (filterCategory) queryConstraints.push(where("category", "==", filterCategory));
-
-      // Limita la risposta ai primi 300 record per garantire velocità elevata
-      queryConstraints.push(limit(300));
 
       const q = query(colRef, ...queryConstraints);
       const querySnapshot = await getDocs(q);
@@ -1122,10 +1133,15 @@
       const filteredTotalCount = filtered.reduce((acc, i) => acc + (i.qty || 1), 0);
       const filteredSicuroCount = filtered.filter(i => i.category === 'Inserito Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
       const filteredNonSicuroCount = filtered.filter(i => i.category === 'Inserito Non Sicuro').reduce((acc, i) => acc + (i.qty || 1), 0);
+      const filteredPaidCount = filtered.filter(i => i.category !== 'Inserito Non Pagato').reduce((acc, i) => acc + (i.qty || 1), 0);
+
+      const earningsData = calculateEarnings(filteredPaidCount);
 
       document.getElementById('filteredTotalCount').innerText = filteredTotalCount;
       document.getElementById('filteredSicuroCount').innerText = filteredSicuroCount;
       document.getElementById('filteredNonSicuroCount').innerText = filteredNonSicuroCount;
+      document.getElementById('filteredCurrentRate').innerText = earningsData.rateText;
+      document.getElementById('filteredMonthEarnings').innerText = earningsData.totalEarnings;
 
       tbody.innerHTML = '';
       if (filtered.length === 0) {
