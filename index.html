@@ -69,10 +69,10 @@
     .btn-delete-month:hover { background: #fecaca; }
     .export-select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; }
 
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .tab-btn {
-      flex: 1; padding: 14px; border: none; background: #e2e8f0; color: #4a5568;
-      cursor: pointer; font-size: 15px; font-weight: bold; border-radius: 8px; transition: all 0.2s;
+      flex: 1; min-width: 140px; padding: 14px; border: none; background: #e2e8f0; color: #4a5568;
+      cursor: pointer; font-size: 14px; font-weight: bold; border-radius: 8px; transition: all 0.2s;
     }
     .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 6px rgba(52,152,219,0.3); }
     .tab-content { display: none; background: var(--card); padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -105,7 +105,7 @@
     .btn-apply { background: var(--primary); color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
 
     .filters { display: flex; gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap; align-items: flex-end; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
     .filter-group label { font-size: 12px; font-weight: 600; color: #64748b; }
     .filters input, .filters select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13.5px; background: white; }
     .btn-search { padding: 8px 14px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; }
@@ -121,6 +121,9 @@
     .badge-sicuro { background: #dcfce7; color: #15803d; }
     .badge-non-sicuro { background: #fef9c3; color: #a16207; }
     .badge-non-pagato { background: #fee2e2; color: #b91c1c; }
+
+    /* Stile Tabella ATECO */
+    .ateco-code-tag { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-family: monospace; border: 1px solid #bfdbfe; display: inline-block; }
 
     /* Effetto Privacy / Sfocatura */
     .privacy-container {
@@ -167,6 +170,7 @@
     /* Form e Tab Agenda */
     .tab-btn.agenda-tab.active { background: #8e44ad; box-shadow: 0 4px 6px rgba(142,68,173,0.3); }
     .tab-btn.viewer-tab.active { background: #e67e22; box-shadow: 0 4px 6px rgba(230,126,34,0.3); }
+    .tab-btn.ateco-tab.active { background: #16a085; box-shadow: 0 4px 6px rgba(22,160,133,0.3); }
     
     .agenda-form {
       background: #fdf4ff; border: 1px solid #f5d0fe; border-left: 5px solid #8e44ad;
@@ -255,6 +259,7 @@
     <button class="tab-btn active" id="btnTabRegistro">📥 Inserimento Rapido</button>
     <button class="tab-btn" id="btnTabConsultazione">🗃️ Consultazione & Archivio</button>
     <button class="tab-btn agenda-tab" id="btnTabAgenda">📅 Agenda & Promemoria</button>
+    <button class="tab-btn ateco-tab" id="btnTabAteco">🔍 Ricerca ATECO</button>
     <button class="tab-btn viewer-tab" id="btnTabViewer" style="display: none;">📊 Visto da JSON (Temporaneo)</button>
   </div>
 
@@ -375,7 +380,7 @@
         <label>Totale Inserimenti non Sicuri</label>
         <div class="privacy-container">
           <span id="filteredNonSicuroCount" class="blurred-data" style="color: var(--non-sicuro);">0</span>
-          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️️</button>
+          <button class="btn-toggle-eye" onclick="toggleBlur(this)" title="Mostra/Nascondi">👁️</button>
         </div>
       </div>
       <div class="stat-item">
@@ -410,6 +415,36 @@
             ⚠️ Seleziona almeno un filtro (Mese, Giorno, Operatore o Categoria) e clicca su <strong>🔍 Cerca</strong> per caricare i dati.
           </td>
         </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TAB: RICERCA ATECO -->
+  <div id="tabAteco" class="tab-content">
+    <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #0369a1; font-size: 14px;">
+      💡 <strong>Strumento di Ricerca ATECO:</strong> Cerca rapidamente tra centinaia di codici ufficiali a 6 cifre digitando il codice o parole chiave della descrizione (es. <em>"software"</em>, <em>"ristorazione"</em>, <em>"consulenza"</em>).
+    </div>
+
+    <div class="filters">
+      <div class="filter-group" style="flex: 2;">
+        <label>Cerca Codice o Descrizione</label>
+        <input type="text" id="atecoSearchInput" placeholder="Inserisci codice o parola chiave...">
+      </div>
+      <button class="btn-search" id="btnSearchAteco">🔍 Cerca</button>
+      <button class="btn-reset" id="btnResetAteco">Resetta</button>
+    </div>
+
+    <p id="atecoResultsCount" style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 10px;"></p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Codice ATECO</th>
+          <th>Descrizione Attività / Settore</th>
+        </tr>
+      </thead>
+      <tbody id="atecoTableBody">
+        <!-- I risultati verranno popolati dinamicamente -->
       </tbody>
     </table>
   </div>
@@ -595,6 +630,795 @@
     "Daniele": "operatore",
     "Guest": "guest"
   };
+
+  // DATABASE COMPLETO CODICI ATECO UFFICIALI (Aggiornato)
+  const ATECO_DATABASE = [
+    ["01.11.00", "Coltivazione di cereali (escluso il riso), legumi da granella e semi oleosi"],
+    ["01.12.00", "Coltivazione di riso"],
+    ["01.13.10", "Coltivazione di ortaggi (inclusi i meloni) in foglia, a fusto, a radice, a tubero, a bulbo in aria aperta"],
+    ["01.13.20", "Coltivazione di ortaggi (inclusi i meloni) in serra"],
+    ["01.13.30", "Coltivazione di barbabietola da zucchero"],
+    ["01.13.40", "Coltivazione di patate"],
+    ["01.14.00", "Coltivazione di canna da zucchero"],
+    ["01.15.00", "Coltivazione di tabacco"],
+    ["01.16.00", "Coltivazione di piante tessili"],
+    ["01.19.10", "Coltivazione di fiori in aria aperta"],
+    ["01.19.20", "Coltivazione di fiori in serra"],
+    ["01.21.00", "Coltivazione di uva"],
+    ["01.22.00", "Coltivazione di frutta di origine tropicale e subtropicale"],
+    ["01.23.00", "Coltivazione di agrumi"],
+    ["01.24.00", "Coltivazione di pomacee e frutta a nocciolo"],
+    ["01.25.00", "Coltivazione di altri alberi da frutta, frutti di bosco e frutta in guscio"],
+    ["01.26.00", "Coltivazione di frutti oleosi"],
+    ["01.27.00", "Coltivazione di piante per la preparazione di bevande"],
+    ["01.28.00", "Coltivazione di spezie, piante aromatiche e medicinali"],
+    ["01.29.00", "Coltivazione di altre colture permanenti"],
+    ["01.30.00", "Riproduzione delle piante"],
+    ["01.41.00", "Allevamento di bovini e bufali da latte"],
+    ["01.42.00", "Allevamento di altri bovini e di bufali"],
+    ["01.43.00", "Allevamento di cavalli e altri equini"],
+    ["01.44.00", "Allevamento di cammelli e camelidi"],
+    ["01.45.00", "Allevamento di ovini e caprini"],
+    ["01.46.00", "Allevamento di suini"],
+    ["01.47.00", "Allevamento di pollame"],
+    ["01.49.10", "Allevamento di conigli"],
+    ["01.49.20", "Allevamento di animali da pelliccia"],
+    ["01.49.30", "Apicoltura"],
+    ["01.49.40", "Allevamento di bachi da seta"],
+    ["01.49.90", "Allevamento di altri animali nca"],
+    ["01.50.00", "Coltivazioni agricole associate all'allevamento di animali: attività mista"],
+    ["01.61.00", "Attività di supporto alla produzione vegetale"],
+    ["01.62.00", "Attività di supporto alla produzione animale"],
+    ["01.63.00", "Attività successive alla raccolta"],
+    ["01.64.00", "Lavorazione delle sementi per la semina"],
+    ["01.70.00", "Caccia, cattura di animali e servizi connessi"],
+    ["02.10.00", "Silvicoltura e altre attività forestali"],
+    ["02.20.00", "Utilizzo di aree forestali"],
+    ["02.30.00", "Raccolta di prodotti selvatici non legnosi"],
+    ["02.40.00", "Servizi di supporto alla silvicoltura"],
+    ["03.11.00", "Pesca marina"],
+    ["03.12.00", "Pesca in acque interne"],
+    ["03.21.00", "Acquacoltura in mare e in acque salmastre"],
+    ["03.22.00", "Acquacoltura in acque interne"],
+    ["05.10.00", "Estrazione di hard coal (antracite e carbon fossile)"],
+    ["05.20.00", "Estrazione di lignite"],
+    ["06.10.00", "Estrazione di petrolio greggio"],
+    ["06.20.00", "Estrazione di gas naturale"],
+    ["07.10.00", "Estrazione di minerali metalliferi ferrosi"],
+    ["07.21.00", "Estrazione di minerali di uranio e di torio"],
+    ["07.29.00", "Estrazione di altri minerali metalliferi non ferrosi"],
+    ["08.11.00", "Estrazione di pietre da taglio, da costruzione, marmo, ardesia, granito"],
+    ["08.12.00", "Estrazione di ghiaia, sabbia; estrazione di argilla e caolino"],
+    ["08.91.00", "Estrazione di minerali per l'industria chimica e per la produzione di fertilizzanti"],
+    ["08.92.00", "Estrazione di torba"],
+    ["08.93.00", "Estrazione di sale"],
+    ["08.99.00", "Estrazione di altri minerali non metalliferi nca"],
+    ["09.10.00", "Attività di supporto all'estrazione di petrolio e di gas naturale"],
+    ["09.90.00", "Attività di supporto all'estrazione di altri minerali"],
+    ["10.11.00", "Produzione di carne non di volatili e di prodotti della macellazione"],
+    ["10.12.00", "Produzione di carne di volatili e di prodotti della macellazione"],
+    ["10.13.00", "Produzione di prodotti a base di carne (inclusa la carne di volatili)"],
+    ["10.20.00", "Lavorazione e conservazione di pesce, crostacei e molluschi"],
+    ["10.31.00", "Lavorazione e conservazione delle patate"],
+    ["10.32.00", "Produzione di succhi di frutta e di ortaggi"],
+    ["10.39.00", "Altra lavorazione e conservazione di frutta e ortaggi"],
+    ["10.41.10", "Produzione di olio di oliva greggio"],
+    ["10.41.20", "Produzione di olio di oliva raffinato"],
+    ["10.41.30", "Produzione di oli e grassi vegetali e animali greggi o raffinati"],
+    ["10.42.00", "Produzione di margarina e di grassi commestibili simili"],
+    ["10.51.10", "Trattamento igienico del latte e trasformazione del latte"],
+    ["10.51.20", "Produzione dei derivati del latte"],
+    ["10.52.00", "Produzione di gelati"],
+    ["10.61.10", "Molitura dei cereali"],
+    ["10.61.20", "Produzione di farine di legumi, di tuberi o di altri frutti"],
+    ["10.62.00", "Produzione di prodotti amidacei"],
+    ["10.71.10", "Produzione di pane e prodotti di panetteria freschi"],
+    ["10.71.20", "Produzione di pasticceria fresca"],
+    ["10.72.00", "Produzione di fetta biscottata, biscotti, prodotti da forno secchi"],
+    ["10.73.00", "Produzione di paste alimentari, di cuscus e di prodotti farinacei simili"],
+    ["10.81.00", "Produzione di zucchero"],
+    ["10.82.00", "Produzione di cacao, cioccolato, caramelle e confetterie"],
+    ["10.83.00", "Lavorazione del caffè e del tè"],
+    ["10.84.00", "Produzione di condimenti e spezie"],
+    ["10.85.00", "Produzione di piatti pronti"],
+    ["10.86.00", "Produzione di omogeneizzati e alimenti dietetici"],
+    ["10.89.00", "Produzione di altri prodotti alimentari nca"],
+    ["10.91.00", "Produzione di mangimi per animali da allevamento"],
+    ["10.92.00", "Produzione di prodotti per l'alimentazione degli animali da compagnia"],
+    ["11.01.00", "Distillazione, rettifica e miscelatura degli alcolici"],
+    ["11.02.10", "Produzione di vini da tavola e v.q.p.r.d."],
+    ["11.02.20", "Produzione di vino spumante e altri vini speciali"],
+    ["11.03.00", "Produzione di sidro e di altri vini a base di frutta"],
+    ["11.04.00", "Produzione di altre bevande fermentate non distillate"],
+    ["11.05.00", "Produzione di birra"],
+    ["11.06.00", "Produzione di malto"],
+    ["11.07.00", "Industria delle bevande analcoliche, delle acque minerali e imbottigliate"],
+    ["12.00.00", "Industria del tabacco"],
+    ["13.10.00", "Preparazione e filatura di fibre tessili"],
+    ["13.20.00", "Tessitura"],
+    ["13.30.00", "Finissaggio dei tessili e degli articoli di vestiario"],
+    ["13.91.00", "Fabbricazione di maglieria"],
+    ["13.92.10", "Fabbricazione di biancheria per la casa, articoli da arredamento"],
+    ["13.92.20", "Fabbricazione di vele, tende, tendoni, sacchi e teli protettivi"],
+    ["13.93.00", "Fabbricazione di tappeti e moquette"],
+    ["13.94.00", "Fabbricazione di spago, corde, funi e reti"],
+    ["13.95.00", "Fabbricazione di tessuti non tessuti e articoli di tali tessuti"],
+    ["13.96.00", "Fabbricazione di altri articoli tessili tecnici ed industriali"],
+    ["13.99.00", "Fabbricazione di altri articoli tessili nca"],
+    ["14.11.00", "Confezione di abbigliamento in pelle"],
+    ["14.12.00", "Confezione di indumenti da lavoro"],
+    ["14.13.10", "Confezione in serie di abbigliamento esterno"],
+    ["14.13.20", "Sartoria e confezione su misura di abbigliamento esterno"],
+    ["14.14.00", "Confezione di biancheria intima"],
+    ["14.19.10", "Confezioni di calzetteria"],
+    ["14.19.20", "Confezione di altri articoli da vestiario e accessori"],
+    ["14.20.00", "Confezione di articoli in pelliccia"],
+    ["14.31.00", "Fabbricazione di articoli di calzetteria in maglia"],
+    ["14.39.00", "Fabbricazione di altri articoli di vestiario in maglia"],
+    ["15.11.00", "Preparazione e tintura di pelli; concia e tintura di cuoio"],
+    ["15.12.00", "Fabbricazione di articoli da viaggio, borse, pelletteria e selleria"],
+    ["15.20.10", "Fabbricazione di calzature in pelle e cuoio"],
+    ["15.20.20", "Fabbricazione di calzature in gomma e plastica"],
+    ["15.20.30", "Fabbricazione di parti in cuoio e altri materiali per calzature"],
+    ["16.10.00", "Taglio e piallatura del legno"],
+    ["16.21.00", "Fabbricazione di fogli da impiallacciatura e pannelli a base di legno"],
+    ["16.22.00", "Fabbricazione di pavimenti in parquet assemblato"],
+    ["16.23.10", "Fabbricazione di porte e finestre in legno"],
+    ["16.23.20", "Fabbricazione di elementi in legno per l'edilizia"],
+    ["16.24.00", "Fabbricazione di imballaggi in legno"],
+    ["16.29.10", "Fabbricazione di articoli in sughero"],
+    ["16.29.20", "Fabbricazione di articoli in paglia e materiali da intreccio"],
+    ["16.29.30", "Fabbricazione di altri oggetti in legno"],
+    ["17.11.00", "Fabbricazione di pasta carta"],
+    ["17.12.00", "Fabbricazione di carta e cartone"],
+    ["17.21.10", "Fabbricazione di carta e cartone ondulato"],
+    ["17.21.20", "Fabbricazione di imballaggi in carta e cartone"],
+    ["17.22.00", "Fabbricazione di articoli igienici e domestici in carta e ovatta"],
+    ["17.23.00", "Fabbricazione di prodotti cartotecnici"],
+    ["17.24.00", "Fabbricazione di carta da parati"],
+    ["17.29.00", "Fabbricazione di altri articoli di carta e cartone"],
+    ["18.11.00", "Stampa di giornali"],
+    ["18.12.00", "Altra stampa"],
+    ["18.13.00", "Lavori di pre-stampa e pre-media"],
+    ["18.14.00", "Legatoria e servizi connessi"],
+    ["18.20.00", "Riproduzione di supporti registrati"],
+    ["19.10.00", "Fabbricazione di prodotti di cokeria"],
+    ["19.20.10", "Raffinerie di olio di petrolio"],
+    ["19.20.20", "Preparazione di prodotti petroliferi raffinati"],
+    ["19.20.30", "Miscelazione di gas petroliferi liquefatti (GPL) e loro imbottigliamento"],
+    ["20.11.00", "Fabbricazione di gas industriali"],
+    ["20.12.00", "Fabbricazione di coloranti e pigmenti"],
+    ["20.13.00", "Fabbricazione di altri prodotti chimici di base inorganici"],
+    ["20.14.00", "Fabbricazione di altri prodotti chimici di base organici"],
+    ["20.15.00", "Fabbricazione di fertilizzanti e composti azotati"],
+    ["20.16.00", "Fabbricazione di materie plastiche in forme primarie"],
+    ["20.17.00", "Fabbricazione di gomma sintetica in forme primarie"],
+    ["20.20.00", "Fabbricazione di agrofarmaci e di altri prodotti chimici per l'agricoltura"],
+    ["20.30.00", "Fabbricazione di pitture, vernici e smalti, inchiostri da stampa e mastici"],
+    ["20.41.10", "Fabbricazione di saponi e detergenti"],
+    ["20.41.20", "Fabbricazione di prodotti per la pulizia e la lucidatura"],
+    ["20.42.00", "Fabbricazione di profumi e cosmetici"],
+    ["20.51.00", "Fabbricazione di esplosivi"],
+    ["20.52.00", "Fabbricazione di colle"],
+    ["20.53.00", "Fabbricazione di oli essenziali"],
+    ["20.59.10", "Fabbricazione di prodotti chimici per l'fotografia"],
+    ["20.59.20", "Fabbricazione di prodotti chimici per impieghi industriali"],
+    ["20.60.00", "Fabbricazione di fibre sintetiche e artificiali"],
+    ["21.10.00", "Fabbricazione di prodotti farmaceutici di base"],
+    ["21.20.10", "Fabbricazione di medicinali e altri preparati farmaceutici"],
+    ["21.20.20", "Fabbricazione di sostanze diagnostiche e reagenti"],
+    ["22.11.10", "Fabbricazione di pneumatici e ricostruzione"],
+    ["22.19.00", "Fabbricazione di altri prodotti in gomma"],
+    ["22.21.00", "Fabbricazione di lastre, fogli, tubi e profilati in materie plastiche"],
+    ["22.22.00", "Fabbricazione di imballaggi in materie plastiche"],
+    ["22.23.00", "Fabbricazione di articoli in plastica per l'edilizia"],
+    ["22.29.10", "Fabbricazione di articoli in plastica per la tavola e la cucina"],
+    ["22.29.90", "Fabbricazione di altri articoli in materie plastiche"],
+    ["23.11.00", "Fabbricazione di vetro piano"],
+    ["23.12.00", "Lavorazione e trasformazione del vetro piano"],
+    ["23.13.00", "Fabbricazione di vetro cavo"],
+    ["23.14.00", "Fabbricazione di fibre di vetro"],
+    ["23.19.00", "Fabbricazione e lavorazione di altro vetro (incluso vetro per uso tecnico)"],
+    ["23.20.00", "Fabbricazione di prodotti refrattari"],
+    ["23.31.00", "Fabbricazione di piastrelle in ceramica per pavimenti e rivestimenti"],
+    ["23.32.00", "Fabbricazione di mattoni, tegole ed altri prodotti per l'edilizia in terracotta"],
+    ["23.41.00", "Fabbricazione di articoli ceramici per uso domestico e ornamentale"],
+    ["23.42.00", "Fabbricazione di articoli sanitari in ceramica"],
+    ["23.43.00", "Fabbricazione di isolatori in ceramica e di pezzi isolanti"],
+    ["23.44.00", "Fabbricazione di altri prodotti ceramici per uso tecnico e industriale"],
+    ["23.49.00", "Fabbricazione di altri prodotti ceramici"],
+    ["23.51.00", "Produzione di cemento"],
+    ["23.52.00", "Produzione di calce e gesso"],
+    ["23.61.00", "Fabbricazione di prodotti in calcestruzzo per l'edilizia"],
+    ["23.62.00", "Fabbricazione di prodotti in gesso per l'edilizia"],
+    ["23.63.00", "Produzione di calcestruzzo pronto per l'uso"],
+    ["23.64.00", "Produzione di malta"],
+    ["23.65.00", "Fabbricazione di prodotti in fibrocemento"],
+    ["23.69.00", "Fabbricazione di altri articoli in calcestruzzo, cemento e gesso"],
+    ["23.70.10", "Taglio, modellatura e finitura di pietre e marmo"],
+    ["23.70.20", "Lavorazione artistica del marmo e di altre pietre"],
+    ["23.91.00", "Fabbricazione di prodotti abrasivi"],
+    ["23.99.00", "Fabbricazione di altri prodotti minerali non metalliferi nca"],
+    ["24.10.00", "Siderurgia - Fabbricazione di ferro, acciaio e ferroleghe"],
+    ["24.20.00", "Fabbricazione di tubi, condotti, profilati cavi e relativi accessori in acciaio"],
+    ["24.31.00", "Stiratura a freddo di barre"],
+    ["24.32.00", "Laminazione a freddo di nastri"],
+    ["24.33.00", "Profilatura mediante formatura o piegatura a freddo"],
+    ["24.34.00", "Trafilatura a freddo"],
+    ["24.41.00", "Produzione di metalli preziosi"],
+    ["24.42.00", "Produzione di alluminio"],
+    ["24.43.00", "Produzione di piombo, zinco e stagno"],
+    ["24.44.00", "Produzione di rame"],
+    ["24.45.00", "Produzione di altri metalli non ferrosi"],
+    ["24.46.00", "Trattamento dei combustibili nucleari"],
+    ["24.51.00", "Fusione di ghisa"],
+    ["24.52.00", "Fusione di acciaio"],
+    ["24.53.00", "Fusione di metalli leggeri"],
+    ["24.54.00", "Fusione di altri metalli non ferrosi"],
+    ["25.11.00", "Fabbricazione di strutture metalliche e parti assemblate"],
+    ["25.12.10", "Fabbricazione di porte, finestre e loro telai in metallo"],
+    ["25.12.20", "Fabbricazione di blindature e casseforti"],
+    ["25.21.00", "Fabbricazione di caloriferi e caldaie per riscaldamento centrale"],
+    ["25.29.00", "Fabbricazione di cisterne, serbatoi e contenitori in metallo"],
+    ["25.30.00", "Fabbricazione di generatori di vapore (esclusi i caldaie per riscaldamento)"],
+    ["25.40.00", "Fabbricazione di armi e munizioni"],
+    ["25.50.00", "Fucinatura, stampaggio, imbutitura e profilatura dei metalli; pulitura"],
+    ["25.61.00", "Trattamento e rivestimento dei metalli"],
+    ["25.62.00", "Lavorazione meccanica generale"],
+    ["25.71.00", "Fabbricazione di articoli di coltelleria e posateria"],
+    ["25.72.00", "Fabbricazione di serrature e cerniere"],
+    ["25.73.10", "Fabbricazione di utensileria a mano"],
+    ["25.73.20", "Fabbricazione di stampi, portastampi, sagome e forme"],
+    ["25.91.00", "Fabbricazione di bidoni in acciaio e contenitori analoghi"],
+    ["25.92.00", "Fabbricazione di imballaggi leggeri in metallo"],
+    ["25.93.00", "Fabbricazione di prodotti fabbricati con fili metallici, catene e molle"],
+    ["25.94.00", "Fabbricazione di articoli di bulloneria e raccorderia"],
+    ["25.99.10", "Fabbricazione di articoli metallici per il bagno e la cucina"],
+    ["25.99.90", "Fabbricazione di altri articoli metallici nca"],
+    ["26.11.00", "Fabbricazione di componenti elettronici"],
+    ["26.12.00", "Fabbricazione di schede elettroniche assemblate"],
+    ["26.20.00", "Fabbricazione di computer e unità periferiche"],
+    ["26.30.00", "Fabbricazione di apparecchi per le telecomunicazioni"],
+    ["26.40.00", "Fabbricazione di apparecchi audio e video di consumo"],
+    ["26.51.10", "Fabbricazione di strumenti e apparecchi di misurazione, prova e navigazione"],
+    ["26.51.20", "Fabbricazione di orologi"],
+    ["26.60.00", "Fabbricazione di apparecchi per elettromedicina e elettroterapia"],
+    ["26.70.10", "Fabbricazione di elementi ottici e strumenti ottici"],
+    ["26.70.20", "Fabbricazione di apparecchiature fotografiche e cinematografiche"],
+    ["26.80.00", "Fabbricazione di supporti magnetici ed ottici"],
+    ["27.11.00", "Fabbricazione di motori, generatori e trasformatori elettrici"],
+    ["27.12.00", "Fabbricazione di apparecchiature per la distribuzione e il controllo dell'elettricità"],
+    ["27.20.00", "Fabbricazione di batterie e accumulatori elettrici"],
+    ["27.31.00", "Fabbricazione di cavi a fibra ottica"],
+    ["27.32.00", "Fabbricazione di altri fili e cavi elettrici ed elettronici"],
+    ["27.33.00", "Fabbricazione di dispositivi di cablaggio"],
+    ["27.40.00", "Fabbricazione di apparecchiature di illuminazione"],
+    ["27.51.00", "Fabbricazione di elettrodomestici"],
+    ["27.52.00", "Fabbricazione di apparecchi non elettrici per uso domestico"],
+    ["27.90.00", "Fabbricazione di altre apparecchiature elettriche"],
+    ["28.11.00", "Fabbricazione di motori e turbine (esclusi quelli per aeromobili, veicoli e motocicli)"],
+    ["28.12.00", "Fabbricazione di apparecchiature fluidodinamiche"],
+    ["28.13.00", "Fabbricazione di altre pompe e compressori"],
+    ["28.14.00", "Fabbricazione di altri rubinetti e valvole"],
+    ["28.15.00", "Fabbricazione di cuscinetti, ingranaggi, organi di trasmissione"],
+    ["28.21.00", "Fabbricazione di forni, bruciatori e sistemi di riscaldamento"],
+    ["28.22.00", "Fabbricazione di macchine e apparecchi di sollevamento e movimentazione"],
+    ["28.23.00", "Fabbricazione di macchine ed attrezzature per ufficio"],
+    ["28.24.00", "Fabbricazione di utensili portatili a motore"],
+    ["28.25.00", "Fabbricazione di attrezzature di ventilazione e refrigerazione commerciale"],
+    ["28.29.10", "Fabbricazione di bilance e macchine per la pesatura"],
+    ["28.29.20", "Fabbricazione di macchine per l'imballaggio e l'inscatolamento"],
+    ["28.29.30", "Fabbricazione di macchine per la pulizia di bottiglie e contenitori"],
+    ["28.30.00", "Fabbricazione di macchine per l'agricoltura e la silvicoltura"],
+    ["28.41.00", "Fabbricazione di macchine utensili per la formatura dei metalli"],
+    ["28.49.00", "Fabbricazione di altre macchine utensili"],
+    ["28.91.00", "Fabbricazione di macchine per la metallurgia"],
+    ["28.92.00", "Fabbricazione di macchine per le industrie estrattive e l'edilizia"],
+    ["28.93.00", "Fabbricazione di macchine per l'industria alimentare, delle bevande e del tabacco"],
+    ["28.94.00", "Fabbricazione di macchine per le industrie tessili, dell'abbigliamento e del cuoio"],
+    ["28.95.00", "Fabbricazione di macchine per l'industria della carta e del cartone"],
+    ["28.96.00", "Fabbricazione di macchine per l'industria delle materie plastiche e della gomma"],
+    ["28.99.00", "Fabbricazione di altre macchine per impieghi speciali nca"],
+    ["29.10.00", "Fabbricazione di autoveicoli"],
+    ["29.20.00", "Fabbricazione di carrozzerie per autoveicoli, rimorchi e semirimorchi"],
+    ["29.31.00", "Fabbricazione di apparecchiature elettriche ed elettroniche per autoveicoli"],
+    ["29.32.00", "Fabbricazione di altre parti ed accessori per autoveicoli"],
+    ["30.11.00", "Costruzione di navi e strutture galleggianti"],
+    ["30.12.00", "Costruzione di imbarcazioni da diporto e sportive"],
+    ["30.20.00", "Costruzione di locomotive e di materiale rotabile ferro-tranviario"],
+    ["30.30.00", "Costruzione di aeromobili, veicoli spaziali e dei relativi dispositivi"],
+    ["30.40.00", "Costruzione di veicoli militari da combattimento"],
+    ["30.91.00", "Fabbricazione di motocicli"],
+    ["30.92.00", "Fabbricazione di biciclette e veicoli per invalidi"],
+    ["30.99.00", "Fabbricazione di altri mezzi di trasporto nca"],
+    ["31.01.00", "Fabbricazione di mobili per uffici e negozi"],
+    ["31.02.00", "Fabbricazione di mobili per cucina"],
+    ["31.03.00", "Fabbricazione di materassi"],
+    ["31.09.10", "Fabbricazione di mobili per arredo domestico"],
+    ["31.09.90", "Fabbricazione di altri mobili nca"],
+    ["32.11.00", "Coniazione di monete"],
+    ["32.12.10", "Fabbricazione di oggetti di gioielleria ed oreficeria in metalli preziosi"],
+    ["32.12.20", "Lavorazione delle pietre preziose e semipreziose"],
+    ["32.13.00", "Fabbricazione di bigiotteria e articoli analoghi"],
+    ["32.20.00", "Fabbricazione di strumenti musicali"],
+    ["32.30.00", "Fabbricazione di articoli sportivi"],
+    ["32.40.00", "Fabbricazione di giochi e giocattoli"],
+    ["32.50.10", "Fabbricazione di protesi dentarie"],
+    ["32.50.20", "Fabbricazione di protesi ortopediche, oculari e di apparecchi auditivi"],
+    ["32.50.30", "Fabbricazione di strumenti e forniture medico-dentistiche"],
+    ["32.50.40", "Fabbricazione di lenti e montature per occhiali"],
+    ["32.91.00", "Fabbricazione di scope e spazzole"],
+    ["32.99.10", "Fabbricazione di ombrelli, bastoni da passeggio"],
+    ["32.99.20", "Fabbricazione di articoli per feste, carnevale e altri intrattenimenti"],
+    ["32.99.90", "Altre industrie manifatturiere nca"],
+    ["33.11.00", "Riparazione di prodotti in metallo"],
+    ["33.12.00", "Riparazione di macchinari"],
+    ["33.13.00", "Riparazione di apparecchiature ottiche e scientifiche"],
+    ["33.14.00", "Riparazione di apparecchiature elettriche"],
+    ["33.15.00", "Riparazione e manutenzione di navi e imbarcazioni"],
+    ["33.16.00", "Riparazione e manutenzione di aeromobili e di veicoli spaziali"],
+    ["33.17.00", "Riparazione e manutenzione di altri mezzi di trasporto"],
+    ["33.19.00", "Riparazione di altre apparecchiature"],
+    ["33.20.00", "Installazione di macchine ed apparecchiature industriali"],
+    ["35.11.00", "Produzione di energia elettrica"],
+    ["35.12.00", "Trasmissione di energia elettrica"],
+    ["35.13.00", "Distribuzione di energia elettrica"],
+    ["35.14.00", "Commercio di energia elettrica"],
+    ["35.21.00", "Produzione di gas"],
+    ["35.22.00", "Distribuzione di combustibili gassosi mediante condotte"],
+    ["35.23.00", "Commercio di gas distribuito a mezzo di condotte"],
+    ["35.30.00", "Fornitura di vapore e aria condizionata"],
+    ["36.00.00", "Raccolta, trattamento e fornitura di acqua"],
+    ["37.00.00", "Gestione delle reti fognarie"],
+    ["38.11.00", "Raccolta di rifiuti non pericolosi"],
+    ["38.12.00", "Raccolta di rifiuti pericolosi"],
+    ["38.21.00", "Trattamento e smaltimento dei rifiuti non pericolosi"],
+    ["38.22.00", "Trattamento e smaltimento dei rifiuti pericolosi"],
+    ["38.31.00", "Demolizione di carcasse"],
+    ["38.32.10", "Recupero e riciclaggio di rottami metallici"],
+    ["38.32.20", "Recupero e riciclaggio di carta, cartone, vetro e plastica"],
+    ["39.00.00", "Attività di risanamento e altri servizi di gestione dei rifiuti"],
+    ["41.10.00", "Sviluppo di progetti immobiliari"],
+    ["41.20.00", "Costruzione di edifici residenziali e non residenziali"],
+    ["42.11.00", "Costruzione di strade, autostrade e piste aeroportuali"],
+    ["42.12.00", "Costruzione di linee ferroviarie e metropolitane"],
+    ["42.13.00", "Costruzione di ponti e gallerie"],
+    ["42.21.00", "Costruzione di opere di pubblica utilità per il trasporto di fluidi"],
+    ["42.22.00", "Costruzione di opere di pubblica utilità per l'energia e le telecomunicazioni"],
+    ["42.91.00", "Costruzione di opere idrauliche"],
+    ["42.99.00", "Costruzione di altre opere di ingegneria civile nca"],
+    ["43.11.00", "Demolizione"],
+    ["43.12.00", "Preparazione del cantiere edile e sistemazione del terreno"],
+    ["43.13.00", "Trivellazioni e perforazioni"],
+    ["43.21.01", "Installazione di impianti elettrici in edifici o in altre opere di costruzione"],
+    ["43.21.02", "Installazione di impianti di illuminazione stradale, di allarme, impianti semaforici"],
+    ["43.21.03", "Installazione di impianti di protezione da scariche atmosferiche, di protezione antincendio"],
+    ["43.22.01", "Installazione di impianti idraulici, di riscaldamento e di condizionamento dell'aria"],
+    ["43.22.02", "Installazione di impianti per la distribuzione del gas"],
+    ["43.22.03", "Installazione di impianti di spegnimento antincendio"],
+    ["43.29.01", "Installazione, riparazione e manutenzione di ascensori e scale mobili"],
+    ["43.29.02", "Isolamento termico, acustico o antivibrante"],
+    ["43.29.09", "Altri lavori di costruzione e installazione nca"],
+    ["43.31.00", "Intonacatura"],
+    ["43.32.01", "Posa in opera di casseforti, casseforti blindate"],
+    ["43.32.02", "Posa in opera di infissi, arredi, controsoffitti, pareti mobili"],
+    ["43.33.00", "Rivestimento di pavimenti e muri"],
+    ["43.34.00", "Tinteggiatura e posa in opera di vetri"],
+    ["43.39.00", "Altri lavori di completamento e di finitura degli edifici"],
+    ["43.91.00", "Realizzazione di coperture edili"],
+    ["43.99.01", "Noleggio di gru ed altre attrezzature con operatore per la costruzione"],
+    ["43.99.09", "Altre attività di lavori specializzati di costruzione nca"],
+    ["45.11.01", "Commercio all'ingrosso e al dettaglio di autovetture e di autoveicoli leggeri"],
+    ["45.11.02", "Commercio al dettaglio di autovetture e di autoveicoli leggeri usati"],
+    ["45.19.01", "Commercio all'ingrosso e al dettaglio di altri autoveicoli"],
+    ["45.20.01", "Riparazioni meccaniche di autoveicoli"],
+    ["45.20.02", "Riparazione di carrozzerie di autoveicoli"],
+    ["45.20.03", "Riparazione di impianti elettrici e di alimentazione per autoveicoli"],
+    ["45.20.04", "Riparazione di pneumatici per autoveicoli"],
+    ["45.31.00", "Commercio all'ingrosso di parti e accessori per autoveicoli"],
+    ["45.32.00", "Commercio al dettaglio di parti e accessori per autoveicoli"],
+    ["45.40.10", "Commercio all'ingrosso e al dettaglio di motocicli e ciclomotori"],
+    ["45.40.20", "Riparazione e manutenzione di motocicli e ciclomotori"],
+    ["45.40.30", "Commercio all'ingrosso e al dettaglio di parti e accessori per motocicli"],
+    ["46.11.00", "Intermediari del commercio di materie prime agricole, animali vivi, materie prime tessili"],
+    ["46.12.00", "Intermediari del commercio di combustibili, minerali, metalli e prodotti chimici"],
+    ["46.13.00", "Intermediari del commercio di legname e materiali da costruzione"],
+    ["46.14.00", "Intermediari del commercio di macchinari, impianti industriali, navi e aeromobili"],
+    ["46.15.00", "Intermediari del commercio di mobili, articoli per la casa e ferramenta"],
+    ["46.16.00", "Intermediari del commercio di tessili, abbigliamento, calzature e articoli in pelle"],
+    ["46.17.00", "Intermediari del commercio di prodotti alimentari, bevande e tabacco"],
+    ["46.18.00", "Intermediari del commercio specializzato in altri prodotti particolari"],
+    ["46.19.00", "Intermediari del commercio di vari prodotti senza prevalenza di alcuno"],
+    ["46.21.00", "Commercio all'ingrosso di cereali, tabacco grezzo, sementi e alimenti per animali"],
+    ["46.22.00", "Commercio all'ingrosso di fiori e piante"],
+    ["46.23.00", "Commercio all'ingrosso di animali vivi"],
+    ["46.24.00", "Commercio all'ingrosso di pelli grezze e cuoio"],
+    ["46.31.10", "Commercio all'ingrosso di frutta e ortaggi freschi"],
+    ["46.31.20", "Commercio all'ingrosso di frutta e ortaggi conservati o preparati"],
+    ["46.32.10", "Commercio all'ingrosso di carne fresca, congelata e surgelata"],
+    ["46.32.20", "Commercio all'ingrosso di prodotti a base di carne"],
+    ["46.33.10", "Commercio all'ingrosso di prodotti lattiero-caseari e di oli e grassi commestibili"],
+    ["46.33.20", "Commercio all'ingrosso di uova"],
+    ["46.34.10", "Commercio all'ingrosso di bevande alcoliche"],
+    ["46.34.20", "Commercio all'ingrosso di bevande analcoliche"],
+    ["46.35.00", "Commercio all'ingrosso di prodotti del tabacco"],
+    ["46.36.00", "Commercio all'ingrosso di zucchero, cioccolato e dolciume"],
+    ["46.37.00", "Commercio all'ingrosso di caffè, tè, cacao e spezie"],
+    ["46.38.10", "Commercio all'ingrosso di prodotti della pesca freschi o conservati"],
+    ["46.38.90", "Commercio all'ingrosso di altri prodotti alimentari"],
+    ["46.39.10", "Commercio all'ingrosso non specializzato di prodotti alimentari, bevande e tabacco"],
+    ["46.41.10", "Commercio all'ingrosso di tessuti"],
+    ["46.41.20", "Commercio all'ingrosso di articoli di merceria, filati e passamaneria"],
+    ["46.42.10", "Commercio all'ingrosso di abbigliamento e accessori"],
+    ["46.42.20", "Commercio all'ingrosso di calzature"],
+    ["46.43.10", "Commercio all'ingrosso di elettrodomestici, di apparecchi radio e televisori"],
+    ["46.43.20", "Commercio all'ingrosso di supporti audio e video registrati"],
+    ["46.44.10", "Commercio all'ingrosso di porcellane, vetrerie e stoviglie"],
+    ["46.44.20", "Commercio all'ingrosso di saponi, detersivi e altri prodotti per la pulizia"],
+    ["46.45.00", "Commercio all'ingrosso di profumi e cosmetici"],
+    ["46.46.10", "Commercio all'ingrosso di medicinali"],
+    ["46.46.20", "Commercio all'ingrosso di articoli medicali e ortopedici"],
+    ["46.47.10", "Commercio all'ingrosso di mobili da casa"],
+    ["46.47.20", "Commercio all'ingrosso di tappeti e rivestimenti per pavimenti"],
+    ["46.48.00", "Commercio all'ingrosso di orologi e di gioielleria"],
+    ["46.49.10", "Commercio all'ingrosso di carta, cartone e articoli di cartoleria"],
+    ["46.49.20", "Commercio all'ingrosso di libri, riviste e giornali"],
+    ["46.49.30", "Commercio all'ingrosso di giochi e giocattoli"],
+    ["46.49.40", "Commercio all'ingrosso di articoli sportivi, comprese le biciclette"],
+    ["46.51.00", "Commercio all'ingrosso di computer, apparecchiature informatiche periferiche e software"],
+    ["46.52.00", "Commercio all'ingrosso di apparecchiature elettroniche e per telecomunicazioni"],
+    ["46.61.00", "Commercio all'ingrosso di macchine, accessori e utensili agricoli"],
+    ["46.62.00", "Commercio all'ingrosso di macchine utensili"],
+    ["46.63.00", "Commercio all'ingrosso di macchine per l'estrazione, la costruzione e l'ingegneria civile"],
+    ["46.64.00", "Commercio all'ingrosso di macchine per l'industria tessile, per la cucitura e per la maglieria"],
+    ["46.65.00", "Commercio all'ingrosso di mobili per ufficio e negozi"],
+    ["46.66.00", "Commercio all'ingrosso di altre macchine e attrezzature per ufficio"],
+    ["46.69.10", "Commercio all'ingrosso di navi, imbarcazioni e aeromobili"],
+    ["46.69.20", "Commercio all'ingrosso di materiale elettrico per impianti ad uso industriale"],
+    ["46.69.90", "Commercio all'ingrosso di altre macchine ed attrezzature per l'industria, il commercio"],
+    ["46.71.00", "Commercio all'ingrosso di combustibili solidi, liquidi, gassosi e di prodotti derivati"],
+    ["46.72.10", "Commercio all'ingrosso di minerali metalliferi e di metalli ferrosi"],
+    ["46.72.20", "Commercio all'ingrosso di metalli non ferrosi e prodotti semilavorati"],
+    ["46.73.10", "Commercio all'ingrosso di legname, semilavorati in legno e legno artificiale"],
+    ["46.73.20", "Commercio all'ingrosso di materiali da costruzione (inclusi i sanitari)"],
+    ["46.74.10", "Commercio all'ingrosso di articoli in ferro e di altri utensili"],
+    ["46.74.20", "Commercio all'ingrosso di apparecchi e accessori per impianti idraulici e di riscaldamento"],
+    ["46.75.00", "Commercio all'ingrosso di prodotti chimici per l'industria"],
+    ["46.76.00", "Commercio all'ingrosso di altri prodotti intermedi"],
+    ["46.77.10", "Commercio all'ingrosso di rottami e subprodotti della lavorazione industriale metallici"],
+    ["46.77.20", "Commercio all'ingrosso di altri materiali di recupero non metallici"],
+    ["46.90.00", "Commercio all'ingrosso non specializzato"],
+    ["47.11.10", "Ipermercati"],
+    ["47.11.20", "Supermercati"],
+    ["47.11.30", "Discount di alimentari"],
+    ["47.11.40", "Minimercati ed altri esercizi non specializzati di alimentari vari"],
+    ["47.19.10", "Grandi magazzini"],
+    ["47.19.20", "Commercio al dettaglio in altri esercizi non specializzati di beni di consumo"],
+    ["47.21.00", "Commercio al dettaglio di frutta e verdura in esercizi specializzati"],
+    ["47.22.00", "Commercio al dettaglio di carne e di prodotti a base di carne in esercizi specializzati"],
+    ["47.23.00", "Commercio al dettaglio di pesce, crostacei e molluschi in esercizi specializzati"],
+    ["47.24.10", "Commercio al dettaglio di pane"],
+    ["47.24.20", "Commercio al dettaglio di torte, dolciumi, confetteria"],
+    ["47.25.00", "Commercio al dettaglio di bevande in esercizi specializzati"],
+    ["47.26.00", "Commercio al dettaglio di prodotti del tabacco in esercizi specializzati"],
+    ["47.29.10", "Commercio al dettaglio di latte e di prodotti lattiero-caseari"],
+    ["47.29.90", "Commercio al dettaglio di altri prodotti alimentari in esercizi specializzati"],
+    ["47.30.00", "Commercio al dettaglio di carburante per autotrazione"],
+    ["47.41.00", "Commercio al dettaglio di computer, unità periferiche, software e attrezzature per ufficio"],
+    ["47.42.00", "Commercio al dettaglio di apparecchiature per telecomunicazioni e telefonia"],
+    ["47.43.00", "Commercio al dettaglio di apparecchi audio e video in esercizi specializzati"],
+    ["47.51.10", "Commercio al dettaglio di tessuti per l'abbigliamento, le calzature e l'arredamento"],
+    ["47.51.20", "Commercio al dettaglio di filati per maglieria e merceria"],
+    ["47.52.10", "Commercio al dettaglio di ferramenta, utensili, vernici, vetro piano"],
+    ["47.52.20", "Commercio al dettaglio di articoli igienico-sanitari"],
+    ["47.52.30", "Commercio al dettaglio di materiali da costruzione"],
+    ["47.53.10", "Commercio al dettaglio di moquette e rivestimenti per pavimenti"],
+    ["47.53.20", "Commercio al dettaglio di carte da parati e tende"],
+    ["47.54.00", "Commercio al dettaglio di elettrodomestici in esercizi specializzati"],
+    ["47.59.10", "Commercio al dettaglio di mobili per la casa"],
+    ["47.59.20", "Commercio al dettaglio di utensili per la casa, di cristallerie e porcellane"],
+    ["47.59.30", "Commercio al dettaglio di articoli di illuminazione"],
+    ["47.61.00", "Commercio al dettaglio di libri in esercizi specializzati"],
+    ["47.62.10", "Commercio al dettaglio di giornali, riviste e periodici"],
+    ["47.62.20", "Commercio al dettaglio di articoli di cartoleria e forniture per ufficio"],
+    ["47.63.00", "Commercio al dettaglio di registrazioni musicali e video in esercizi specializzati"],
+    ["47.64.10", "Commercio al dettaglio di articoli sportivi, comprese le biciclette"],
+    ["47.64.20", "Commercio al dettaglio di imbarcazioni e articoli da campeggio"],
+    ["47.65.00", "Commercio al dettaglio di giochi e giocattoli in esercizi specializzati"],
+    ["47.71.10", "Commercio al dettaglio di confezioni per adulti"],
+    ["47.71.20", "Commercio al dettaglio di confezioni per bambini e neonati"],
+    ["47.71.30", "Commercio al dettaglio di biancheria intima, maglieria, camicie"],
+    ["47.71.40", "Commercio al dettaglio di calzature e articoli in pelle"],
+    ["47.72.10", "Commercio al dettaglio di calzature e accessori"],
+    ["47.72.20", "Commercio al dettaglio di articoli da viaggio, borse e pelletteria"],
+    ["47.73.10", "Farmacie"],
+    ["47.74.00", "Commercio al dettaglio di articoli medicali e ortopedici in esercizi specializzati"],
+    ["47.75.10", "Commercio al dettaglio di profumi, cosmetici e saponi"],
+    ["47.76.10", "Commercio al dettaglio di fiori e piante"],
+    ["47.76.20", "Commercio al dettaglio di piccoli animali domestici"],
+    ["47.77.00", "Commercio al dettaglio di orologi, articoli di gioielleria e argenteria"],
+    ["47.78.10", "Commercio al dettaglio di materiale per ottica e fotografia"],
+    ["47.78.30", "Commercio al dettaglio di oggetti d'arte, di antiquariato e da collezione"],
+    ["47.78.90", "Commercio al dettaglio di altri prodotti non alimentari nca"],
+    ["47.79.10", "Commercio al dettaglio di libri usati"],
+    ["47.79.20", "Commercio al dettaglio di altri beni usati"],
+    ["47.81.00", "Commercio al dettaglio ambulante di prodotti alimentari e bevande"],
+    ["47.82.00", "Commercio al dettaglio ambulante di tessuti, articoli tessili, abbigliamento e calzature"],
+    ["47.89.00", "Commercio al dettaglio ambulante di altri prodotti"],
+    ["47.91.10", "Commercio al dettaglio di qualsiasi tipo di prodotto effettuato via internet (E-commerce)"],
+    ["47.91.20", "Commercio al dettaglio di qualsiasi tipo di prodotto effettuato per televisione, radio, telefono"],
+    ["47.99.10", "Commercio al dettaglio di prodotti vari effettuato mediante distributori automatici"],
+    ["47.99.20", "Commercio al dettaglio diretto effettuato da porta a porta"],
+    ["49.10.00", "Trasporto ferroviario di passeggeri (interurbano)"],
+    ["49.20.00", "Trasporto ferroviario di merci"],
+    ["49.31.00", "Trasporto passeggeri urbano e suburbano"],
+    ["49.32.10", "Trasporto con taxi"],
+    ["49.32.20", "Noleggio di autovetture con conducente (NCC)"],
+    ["49.39.01", "Gestioni di funicolari, sciovie e seggiovie"],
+    ["49.39.09", "Altre attività di trasporti terrestri di passeggeri nca"],
+    ["49.41.00", "Trasporto di merci su strada"],
+    ["49.42.00", "Servizi di trasloco"],
+    ["49.50.10", "Trasporto mediante condotte di gas"],
+    ["49.50.20", "Trasporto mediante condotte di liquidi"],
+    ["50.10.00", "Trasporto marittimo e costiero di passeggeri"],
+    ["50.20.00", "Trasporto marittimo e costiero di merci"],
+    ["50.30.00", "Trasporto di passeggeri per vie d'acqua interne"],
+    ["50.40.00", "Trasporto di merci per vie d'acqua interne"],
+    ["51.10.10", "Trasporto aereo di linea di passeggeri"],
+    ["51.10.20", "Trasporto aereo non di linea di passeggeri"],
+    ["51.21.00", "Trasporto aereo di merci"],
+    ["51.22.00", "Trasporto spaziale"],
+    ["52.10.10", "Magazzini frigoriferi per conto terzi"],
+    ["52.10.20", "Magazzini di custodia e deposito per conto terzi"],
+    ["52.21.10", "Gestione di parcheggi e autorimesse"],
+    ["52.21.20", "Gestione di infrastrutture per il trasporto stradale"],
+    ["52.22.00", "Attività dei servizi connessi al trasporto marittimo e per vie d'acqua"],
+    ["52.23.00", "Attività dei servizi connessi al trasporto aereo"],
+    ["52.24.10", "Movimentazione merci relativa a trasporti marittimi e fluviali"],
+    ["52.24.20", "Movimentazione merci relativa ad altri trasporti terrestri o aerei"],
+    ["52.29.10", "Spedizionieri e agenzie di dogana"],
+    ["52.29.22", "Servizi logistici relativi al trasporto merci"],
+    ["53.10.00", "Attività postali con obbligo di servizio universale"],
+    ["53.20.00", "Altre attività postali e di corriere"],
+    ["55.10.00", "Alberghi e strutture simili"],
+    ["55.20.10", "Villaggi turistici"],
+    ["55.20.20", "Ostelli della gioventù"],
+    ["55.20.30", "Rifugi di montagna"],
+    ["55.20.40", "Campi di campeggio e aree attrezzate per camper e roulotte"],
+    ["55.20.51", "Affittacamere per brevi soggiorni, case ed appartamenti per vacanze, bed and breakfast"],
+    ["55.20.52", "Attività di alloggio connesse alle aziende agricole (Agriturismi)"],
+    ["55.30.00", "Aree di campeggio e aree attrezzate per veicoli ricreazionali"],
+    ["55.90.00", "Altri alloggi"],
+    ["56.10.11", "Ristorazione con somministrazione"],
+    ["56.10.12", "Attività di ristorazione connesse alle aziende agricole"],
+    ["56.10.20", "Ristorazione senza somministrazione con asporto"],
+    ["56.10.30", "Gelaterie e pasticcerie"],
+    ["56.10.41", "Ristorazione ambulante"],
+    ["56.10.50", "Ristorazione su treni e navi"],
+    ["56.21.00", "Catering per eventi, banqueting"],
+    ["56.29.10", "Mense"],
+    ["56.29.20", "Catering continuativo su base contrattuale"],
+    ["56.30.00", "Bar e altri esercizi simili senza cucina"],
+    ["58.11.00", "Edizione di libri"],
+    ["58.12.00", "Pubblicazione di elenchi e indirizzari"],
+    ["58.13.00", "Edizione di giornali"],
+    ["58.14.00", "Edizione di riviste e periodici"],
+    ["58.19.00", "Altre attività editoriali"],
+    ["58.21.00", "Edizione di giochi per computer"],
+    ["58.29.00", "Edizione di altri software a confezione non personalizzato"],
+    ["59.11.00", "Attività di produzione cinematografica, di video e di programmi televisivi"],
+    ["59.12.00", "Attività di post-produzione cinematografica, di video e di programmi televisivi"],
+    ["59.13.00", "Attività di distribuzione cinematografica, di video e di programmi televisivi"],
+    ["59.14.00", "Attività di proiezione cinematografica"],
+    ["59.20.10", "Edizione di registrazioni sonore"],
+    ["59.20.20", "Edizione di musica stampata"],
+    ["59.20.30", "Studi di registrazione sonora"],
+    ["60.10.00", "Trasmissioni radiofoniche"],
+    ["60.20.00", "Programmazione e trasmissioni televisive"],
+    ["61.10.00", "Telecomunicazioni fisse"],
+    ["61.20.00", "Telecomunicazioni mobili"],
+    ["61.30.00", "Telecomunicazioni via satellite"],
+    ["61.90.10", "Erogazione di servizi di accesso ad internet (ISP)"],
+    ["61.90.90", "Altre attività di telecomunicazione nca"],
+    ["62.01.00", "Produzione di software non connesso all'edizione"],
+    ["62.02.00", "Consulenza nel campo delle tecnologie dell'informazione"],
+    ["62.03.00", "Gestione di strutture e apparecchiature informatiche (facility management)"],
+    ["62.09.01", "Configurazione di server e postazioni di lavoro"],
+    ["62.09.09", "Altre attività dei servizi connessi alle tecnologie dell'informazione nca"],
+    ["63.11.10", "Elaborazione dati"],
+    ["63.11.20", "Hosting e fornitura di servizi applicativi (ASP)"],
+    ["63.12.00", "Portali web"],
+    ["63.91.00", "Attività delle agenzie di stampa"],
+    ["63.99.00", "Altre attività dei servizi d'informazione nca"],
+    ["64.11.00", "Attività della banca centrale"],
+    ["64.19.10", "Attività bancarie"],
+    ["64.19.20", "Fondi monetari"],
+    ["64.20.00", "Attività delle società di partecipazione (holding)"],
+    ["64.30.00", "Fondi comuni di investimento e entità finanziarie simili"],
+    ["64.91.00", "Lasing finanziario"],
+    ["64.92.01", "Attività dei intermediari finanziari con concessione di crediti"],
+    ["64.92.10", "Attività dei confidi"],
+    ["64.99.10", "Attività di intermediazione mobiliare"],
+    ["64.99.90", "Altre attività di servizi finanziari nca"],
+    ["65.11.00", "Assicurazioni sulla vita"],
+    ["65.12.00", "Assicurazioni diverse da quelle sulla vita"],
+    ["65.20.00", "Riassicurazione"],
+    ["65.30.00", "Fondi pensione"],
+    ["66.11.00", "Amministrazione di mercati finanziari"],
+    ["66.12.00", "Attività di negoziazione di contratti relativi a titoli e merci"],
+    ["66.19.10", "Attività di promotori finanziari"],
+    ["66.19.20", "Attività di consulenza in materia di investimenti"],
+    ["66.21.00", "Valutazione dei rischi e dei danni (periti assicurativi)"],
+    ["66.22.00", "Attività di agenti e broker di assicurazioni"],
+    ["66.29.09", "Altre attività ausiliarie delle assicurazioni e dei fondi pensione"],
+    ["66.30.00", "Gestione di fondi comune di investimento e patrimonio"],
+    ["68.10.00", "Compravendita di beni immobili effettuata su beni propri"],
+    ["68.20.01", "Locazione immobiliare di beni propri o in leasing (immobili residenziali)"],
+    ["68.20.02", "Locazione immobiliare di beni propri o in leasing (immobili non residenziali)"],
+    ["68.31.00", "Attività delle agenzie immobiliari"],
+    ["68.32.00", "Gestione di immobili per conto terzi"],
+    ["69.10.10", "Attività degli studi legali"],
+    ["69.10.20", "Attività degli studi notarili"],
+    ["69.20.13", "Servizi forniti da dottori commercialisti"],
+    ["69.20.14", "Servizi forniti da esperti contabili"],
+    ["69.20.15", "Servizi forniti da consulenti del lavoro"],
+    ["69.20.20", "Attività di tenuta contabilità, revisione dei conti"],
+    ["70.10.00", "Attività delle sedi centrali (head offices)"],
+    ["70.21.00", "Public relations e comunicazione"],
+    ["70.22.09", "Consulenza imprenditoriale e altra consulenza amministrativo-gestionale e pianificazione aziendale"],
+    ["71.11.00", "Attività degli studi di architettura"],
+    ["71.12.10", "Attività degli studi di ingegneria"],
+    ["71.12.20", "Servizi di progettazione ingegneristica integrata"],
+    ["71.12.30", "Attività di cartografia e fotogrammetria"],
+    ["71.12.40", "Attività di perizia tecnica e collaudo"],
+    ["71.20.10", "Collaudi e analisi tecniche di prodotti"],
+    ["71.20.20", "Controllo di qualità e certificazione di prodotti, processi e sistemi"],
+    ["72.11.00", "Ricerca e sviluppo sperimentale nel campo delle biotecnologie"],
+    ["72.19.09", "Ricerca e sviluppo sperimentale nel campo delle altre scienze naturali e dell'ingegneria"],
+    ["72.20.00", "Ricerca e sviluppo sperimentale nel campo delle scienze sociali e umanistiche"],
+    ["73.11.01", "Ideazione di campagne pubblicitarie"],
+    ["73.11.02", "Conduzione di campagne di marketing e altri servizi pubblicitari"],
+    ["73.12.00", "Attività dei concessionari pubblicitari"],
+    ["73.20.00", "Ricerche di mercato e sondaggi di opinione"],
+    ["74.10.10", "Attività di design di moda e design industriale"],
+    ["74.10.20", "Attività dei disegnatori grafici"],
+    ["74.10.30", "Attività dei disegnatori tecnici"],
+    ["74.10.90", "Altre attività di design"],
+    ["74.20.11", "Attività fotografiche connesse al settore della moda"],
+    ["74.20.19", "Altre attività fotografiche"],
+    ["74.20.20", "Laboratori fotografici per lo sviluppo e la stampa"],
+    ["74.30.00", "Traduzione e interpretariato"],
+    ["74.90.10", "Consulenza sulla sicurezza ed igiene del lavoro"],
+    ["74.90.20", "Consulenza agronomica"],
+    ["74.90.93", "Sviluppo di progetti ambientali"],
+    ["74.90.99", "Altre attività di consulenza tecnica nca"],
+    ["75.00.00", "Servizi veterinari"],
+    ["77.11.00", "Noleggio di autovetture ed autoveicoli leggeri senza conducente"],
+    ["77.12.00", "Noleggio di autocarri e di altri veicoli pesanti senza conducente"],
+    ["77.21.00", "Noleggio di attrezzature sportive e ricreative"],
+    ["77.22.00", "Noleggio di videocassette, CD, DVD"],
+    ["77.29.10", "Noleggio di biancheria da tavola, da letto, da bagno e di articoli di vestiario"],
+    ["77.29.90", "Noleggio di altri beni per uso personale e domestico"],
+    ["77.31.00", "Noleggio di macchine e attrezzature agricole"],
+    ["77.32.00", "Noleggio di macchine e attrezzature per la costruzione e l'ingegneria civile"],
+    ["77.33.00", "Noleggio di macchine e attrezzature per ufficio (inclusi i computer)"],
+    ["77.39.10", "Noleggio di altri mezzi di trasporto terrestri"],
+    ["77.39.90", "Noleggio di altre macchine, attrezzature e beni materiali nca"],
+    ["77.40.00", "Concessione dei diritti di sfruttamento di proprietà intellettuale e beni simili"],
+    ["78.10.00", "Servizi di ricerca, selezione e collocamento del personale"],
+    ["78.20.00", "Attività delle agenzie di lavoro interinale (somministrazione)"],
+    ["78.30.00", "Altre attività di gestione e fornitura di risorse umane"],
+    ["79.11.00", "Attività delle agenzie di viaggio"],
+    ["79.12.00", "Attività dei tour operator"],
+    ["79.90.10", "Servizi di prenotazione e altre attività di assistenza turistica non svolte dalle agenzie"],
+    ["79.90.20", "Attività delle guide e degli accompagnatori turistici"],
+    ["80.10.00", "Servizi di vigilanza privata"],
+    ["80.20.00", "Servizi connessi ai sistemi di vigilanza"],
+    ["80.30.00", "Servizi di investigazione privata"],
+    ["81.10.00", "Servizi integrati di gestione agli edifici (facility management)"],
+    ["81.21.00", "Pulizia generale non specializzata di edifici"],
+    ["81.22.02", "Pulizia specializzata di impianti e macchinari industriali"],
+    ["81.29.10", "Servizi di disinfestazione, derattizzazione e disinfezione"],
+    ["81.30.00", "Cura e manutenzione del paesaggio (inclusi parchi, giardini e giardinaggio)"],
+    ["82.11.00", "Servizi integrati di supporto alle funzioni d'ufficio"],
+    ["82.19.00", "Servizi di fotocopiatura, preparazione di documenti e altre attività di supporto"],
+    ["82.20.00", "Attività dei call center"],
+    ["82.30.00", "Organizzazione di convegni e fiere"],
+    ["82.91.10", "Attività delle agenzie di recupero crediti"],
+    ["82.91.20", "Attività delle agenzie di informazioni commerciali"],
+    ["82.92.10", "Confezionamento e imballaggio di merci per conto terzi"],
+    ["82.99.10", "Servizi di gestione di pubblici mercati e pese pubbliche"],
+    ["82.99.99", "Altri servizi di supporto alle imprese nca"],
+    ["84.11.10", "Attività generali di amministrazione pubblica"],
+    ["84.12.00", "Regolamentazione degli affari sanitari, dell'istruzione, dei servizi culturali"],
+    ["84.13.00", "Regolamentazione degli affari economici e della gestione della pubblica amministrazione"],
+    ["84.21.00", "Affari esteri"],
+    ["84.22.00", "Difesa nazionale"],
+    ["84.23.00", "Giustizia ed attività giudiziarie"],
+    ["84.24.00", "Ordine pubblico e sicurezza"],
+    ["84.25.00", "Protezione civile e Vigili del fuoco"],
+    ["84.30.00", "Assicurazione sociale obbligatoria"],
+    ["85.10.00", "Istruzione prescolastica (scuole materne e asili)"],
+    ["85.20.00", "Istruzione primaria (scuole elementari)"],
+    ["85.31.10", "Istruzione secondaria di primo grado (scuole medie)"],
+    ["85.31.20", "Istruzione secondaria di secondo grado di tipo generale (licei)"],
+    ["85.32.09", "Istruzione secondaria di secondo grado di tipo tecnico e professionale"],
+    ["85.41.00", "Istruzione post-secondaria non universitaria"],
+    ["85.42.00", "Istruzione universitaria e post-universitaria"],
+    ["85.51.00", "Corsi sportivi e ricreativi"],
+    ["85.52.01", "Corsi di danza"],
+    ["85.52.09", "Altra formazione culturale (scuole di musica, lingue, pittura)"],
+    ["85.53.00", "Scuole di guida e pilotaggio"],
+    ["85.59.20", "Corsi di formazione professionale ed aggiornamento"],
+    ["85.60.00", "Attività di supporto all'istruzione"],
+    ["86.10.10", "Ospedali e case di cura generiche"],
+    ["86.10.20", "Ospedali e case di cura specialistiche"],
+    ["86.21.00", "Servizi presi da medici di medicina generale"],
+    ["86.22.01", "Prestazioni mediche specialistiche effettuate da medici specialisti"],
+    ["86.22.09", "Altri studi medici specialistici"],
+    ["86.23.00", "Attività degli studi odontoiatri"],
+    ["86.90.10", "Laboratori di analisi cliniche"],
+    ["86.90.20", "Stabilimenti termali"],
+    ["86.90.29", "Altre attività paramediche (fisioterapia, ostetriche, infermieri)"],
+    ["86.90.42", "Servizi di ambulanza"],
+    ["87.10.00", "Strutture di assistenza infermieristica residenziale"],
+    ["87.20.00", "Strutture di assistenza residenziale per disabilità mentali e tossicodipendenze"],
+    ["87.30.00", "Strutture di assistenza residenziale per anziani e disabili"],
+    ["87.90.00", "Altre strutture di assistenza sociale residenziale"],
+    ["88.10.00", "Assistenza sociale non residenziale per anziani e disabili"],
+    ["88.91.00", "Servizi di asili nido e cura del bambino"],
+    ["88.99.00", "Altre attività di assistenza sociale non residenziale nca"],
+    ["90.01.00", "Rappresentazioni artistiche"],
+    ["90.02.01", "Attività di supporto alle rappresentazioni artistiche"],
+    ["90.03.09", "Altre creazioni artistiche e letterarie"],
+    ["90.04.00", "Gestione di teatri, sale da concerto e altre strutture artistiche"],
+    ["91.01.00", "Attività di biblioteche ed archivi"],
+    ["91.02.00", "Attività dei musei"],
+    ["91.03.00", "Gestione di luoghi e monumenti storici e attrazioni simili"],
+    ["91.04.00", "Attività degli orti botanici, dei giardini zoologici e delle riserve naturali"],
+    ["92.00.01", "Ricevitorie del lotto, superenalotto, totocalcio"],
+    ["92.00.02", "Gestione di apparecchi a moneta con vincita in denaro (slot machine)"],
+    ["92.00.09", "Altre attività connesse alle lotterie e alle scommesse"],
+    ["93.11.00", "Gestione di impianti sportivi"],
+    ["93.12.00", "Attività di club sportivi"],
+    ["93.13.00", "Gestione di palestre e centri per il fitness"],
+    ["93.19.10", "Enti e organizzazioni sportive, promozione di eventi sportivi"],
+    ["93.21.00", "Parchi di divertimento e parchi tematici"],
+    ["93.29.10", "Discoteche, sale da ballo, night-club"],
+    ["93.29.20", "Gestione di stabilimenti balneari: marittimi, lacuali e fluviali"],
+    ["93.29.90", "Altre attività ricreative e di intrattenimento nca"],
+    ["94.11.00", "Attività di organizzazioni commerciali e imprenditoriali"],
+    ["94.12.00", "Attività di organizzazioni professionali"],
+    ["94.20.00", "Attività dei sindacati di lavoratori dipendenti"],
+    ["94.91.00", "Attività di organizzazioni religiose"],
+    ["94.92.00", "Attività di organizzazioni politiche"],
+    ["94.99.10", "Attività di organizzazioni per la tutela degli interessi e dei diritti dei cittadini"],
+    ["94.99.20", "Attività di associazioni ricreative e culturali"],
+    ["94.99.90", "Attività di altre organizzazioni associative nca"],
+    ["95.11.00", "Riparazione di computer e periferiche"],
+    ["95.12.00", "Riparazione di apparecchiature per le comunicazioni"],
+    ["95.21.00", "Riparazione di elettrodomestici e di articoli per la casa"],
+    ["95.22.01", "Riparazione di elettrodomestici da casa e da giardino"],
+    ["95.23.00", "Riparazione di calzature e articoli in pelle"],
+    ["95.24.00", "Riparazione di mobili e di oggetti d'arredamento"],
+    ["95.25.00", "Riparazione di orologi, gioielli e articoli preziosi"],
+    ["95.29.00", "Riparazione di altri beni per uso personale e per la casa"],
+    ["96.01.10", "Attività delle lavanderie industriali"],
+    ["96.01.20", "Altre lavanderie, tintorie"],
+    ["96.02.01", "Servizi dei saloni di barbiere e parrucchiere"],
+    ["96.02.02", "Servizi degli istituti di bellezza"],
+    ["96.02.03", "Servizi di manicure e pedicure"],
+    ["96.03.00", "Servizi di pompe funebri e attività connesse"],
+    ["96.04.10", "Servizi di centri per il benessere fisico (wellness, spa, sauna)"],
+    ["96.04.20", "Stabilimenti termali e di bagni di vapore"],
+    ["96.09.01", "Attività di tatuaggio e piercing"],
+    ["96.09.02", "Servizi di cura e custodia degli animali da compagnia"],
+    ["96.09.09", "Altre attività di servizi per la persona nca"],
+    ["97.00.00", "Attività di famiglie e convivenze come datori di lavoro per personale domestico"],
+    ["98.10.00", "Produzione di beni indifferenziati per uso proprio da parte di famiglie"],
+    ["98.20.00", "Produzione di servizi indifferenziati per uso proprio da parte di famiglie"],
+    ["99.00.00", "Organizzazioni ed organismi extraterritoriali"]
+  ];
 
   const firebaseConfig = {
     apiKey: "AIzaSyCUUdVuzsAqMnZF2pmstjiJ5EujSDEexAs",
@@ -1088,6 +1912,55 @@
     return '<span class="badge badge-non-pagato">Non Pagato</span>';
   }
 
+  // MOTORE DI RICERCA ATECO
+  function searchAteco() {
+    const queryStr = document.getElementById('atecoSearchInput')?.value.trim().toLowerCase() || '';
+    const tbody = document.getElementById('atecoTableBody');
+    const countEl = document.getElementById('atecoResultsCount');
+    if (!tbody) return;
+
+    let filtered = ATECO_DATABASE;
+    if (queryStr) {
+      filtered = ATECO_DATABASE.filter(([code, desc]) => 
+        code.toLowerCase().includes(queryStr) || desc.toLowerCase().includes(queryStr)
+      );
+    }
+
+    if (countEl) {
+      countEl.innerText = `Risultati trovati: ${filtered.length} codici`;
+    }
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#94a3b8; padding:20px;">Nessun codice ATECO trovato con i criteri di ricerca inseriti.</td></tr>';
+      return;
+    }
+
+    // Mostra al massimo 150 risultati per non appesantire la pagina se la ricerca è troppo generica
+    const displayList = filtered.slice(0, 150);
+    displayList.forEach(([code, desc]) => {
+      tbody.innerHTML += `<tr>
+        <td><span class="ateco-code-tag">${code}</span></td>
+        <td>${desc}</td>
+      </tr>`;
+    });
+
+    if (filtered.length > 150) {
+      tbody.innerHTML += `<tr><td colspan="2" style="text-align:center; color:#e67e22; padding:12px; font-weight:600;">⚠️ Mostrati i primi 150 risultati su ${filtered.length}. Affina la ricerca per visualizzare altri codici.</td></tr>`;
+    }
+  }
+
+  document.getElementById('btnSearchAteco')?.addEventListener('click', searchAteco);
+  document.getElementById('atecoSearchInput')?.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') searchAteco();
+  });
+
+  document.getElementById('btnResetAteco')?.addEventListener('click', () => {
+    const input = document.getElementById('atecoSearchInput');
+    if (input) input.value = '';
+    searchAteco();
+  });
+
   // NUOVA FUNZIONE CONSULTAZIONE SU RICHIESTA VIA QUERY FIRESTORE
   async function searchConsultation() {
     const tbody = document.getElementById('consultationTableBody');
@@ -1310,8 +2183,8 @@
 
   // NAVIGAZIONE TAB
   function switchTab(activeTabId, activeBtnEl) {
-    const tabs = ['registro', 'consultazione', 'agenda', 'tabViewer'];
-    const btns = ['btnTabRegistro', 'btnTabConsultazione', 'btnTabAgenda', 'btnTabViewer'];
+    const tabs = ['registro', 'consultazione', 'agenda', 'tabAteco', 'tabViewer'];
+    const btns = ['btnTabRegistro', 'btnTabConsultazione', 'btnTabAgenda', 'btnTabAteco', 'btnTabViewer'];
 
     tabs.forEach(t => {
       const el = document.getElementById(t);
@@ -1340,6 +2213,11 @@
     renderAgenda();
   });
 
+  document.getElementById('btnTabAteco')?.addEventListener('click', function() {
+    switchTab('tabAteco', this);
+    searchAteco(); // Carica l'elenco iniziale all'apertura
+  });
+
   document.getElementById('btnTabViewer')?.addEventListener('click', function() {
     switchTab('tabViewer', this);
     renderViewerConsultation();
@@ -1357,6 +2235,7 @@
     const btnRegistro = document.getElementById('btnTabRegistro');
     const btnConsultazione = document.getElementById('btnTabConsultazione');
     const btnAgenda = document.getElementById('btnTabAgenda');
+    const btnAteco = document.getElementById('btnTabAteco');
     const btnExport = document.getElementById('btnExport');
     const btnTriggerImport = document.getElementById('btnTriggerImport');
     const btnDeleteMonth = document.getElementById('btnDeleteMonth');
@@ -1365,6 +2244,7 @@
     const tabRegistro = document.getElementById('registro');
     const tabConsultazione = document.getElementById('consultazione');
     const tabAgenda = document.getElementById('agenda');
+    const tabAteco = document.getElementById('tabAteco');
 
     const disclaimerElement = document.getElementById('disclaimerText');
     const agendaFormContainer = document.getElementById('agendaFormContainer');
@@ -1400,6 +2280,7 @@
       if (btnRegistro) btnRegistro.style.display = 'none';
       if (btnConsultazione) btnConsultazione.style.display = 'none';
       if (btnAgenda) btnAgenda.style.display = 'block';
+      if (btnAteco) btnAteco.style.display = 'block';
       if (btnExport) btnExport.style.display = 'none';
       if (btnTriggerImport) btnTriggerImport.style.display = 'none';
       if (btnDeleteMonth) btnDeleteMonth.style.display = 'none';
@@ -1426,10 +2307,12 @@
       if (tabRegistro) tabRegistro.classList.add('active');
       if (tabConsultazione) tabConsultazione.classList.remove('active');
       if (tabAgenda) tabAgenda.classList.remove('active');
+      if (tabAteco) tabAteco.classList.remove('active');
 
       if (btnRegistro) btnRegistro.style.display = 'block';
       if (btnConsultazione) btnConsultazione.style.display = 'block';
       if (btnAgenda) btnAgenda.style.display = 'block';
+      if (btnAteco) btnAteco.style.display = 'block';
 
       // Funzione Carica JSON Abilitata sia per Operatore che per Admin
       if (btnTriggerImport) btnTriggerImport.style.display = 'inline-flex';
