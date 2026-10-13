@@ -1689,19 +1689,19 @@
     }
 
     try {
-      // 1. Salva su Firebase
+      // 1. Invia prima la notifica su Discord per ottenere l'ID del messaggio
+      const discordMsgId = await sendDiscordNotification(operator, dateVal, timeVal, noteVal);
+
+      // 2. Salva su Firebase includendo correttamente la virgola e la variabile
       await addDoc(agendaRef, {
         date: dateVal,
         time: timeVal || '',
         note: noteVal,
         operator: operator,
         completed: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
         discordMessageId: discordMsgId || null
       });
-
-      // 2. 🚀 Invia la notifica su Discord
-      const discordMsgId = await sendDiscordNotification(operator, dateVal, timeVal, noteVal);
 
       document.getElementById('agendaDate').value = '';
       document.getElementById('agendaTime').value = '';
