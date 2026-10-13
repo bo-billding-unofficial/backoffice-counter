@@ -1489,15 +1489,26 @@
   // Marca una task come completata nel database e notifica Discord con testo barrato
   window.completeAgendaItem = async function(id) {
     try {
-      // Recupera i dati della task corrente prima di aggiornarla (per prendere nota e operatore)
+      // Recupera i dados della task corrente prima di aggiornarla (per prendere nota e operatore)
       const targetItem = allAgenda.find(item => item.id === id);
+
+      // Se esiste un ID del messaggio Discord originale, lo cancelliamo dalla chat
+      if (targetItem && targetItem.discordMessageId && DISCORD_WEBHOOK_URL) {
+        try {
+          await fetch(`${DISCORD_WEBHOOK_URL}/messages/${targetItem.discordMessageId}`, {
+            method: 'DELETE'
+          });
+        } catch (err) {
+          console.error("Errore nella cancellazione del messaggio su Discord:", err);
+        }
+      }
 
       await updateDoc(doc(db, "agenda", id), {
         completed: true,
         completedAt: new Date().toISOString()
       });
 
-      // Se troviamo la task, inviamo la notifica di completamento su Discord
+      // Se troviamo la task, inviamo la notifica di completamento su Discord con emoji e testo barrato
       if (targetItem && DISCORD_WEBHOOK_URL) {
         const timeText = targetItem.time ? ` alle ore ${targetItem.time}` : '';
         const completedMessage = `✅ **Task Completata - Billding**\n• **Inserito da:** ${targetItem.operator}\n• **Data:** ${targetItem.date}${timeText}\n• **Nota:** ~~${targetItem.note}~~`;
@@ -1643,24 +1654,27 @@
   const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1559462029969072128/7vV216OJ3pXM1VoAPH6xEErAEjfrUSs1rTOPgP2J0EnB6LwYPC2Ys48F0yvbEo_hUqm-";
 
   async function sendDiscordNotification(operator, date, time, note) {
-    if (!DISCORD_WEBHOOK_URL) return;
+    if (!DISCORD_WEBHOOK_URL) return null;
 
     const timeText = time ? ` alle ore ${time}` : '';
     const message = `🔔 **Nuovo Promemoria Agenda - Billding**\n• **Inserito da:** ${operator}\n• **Data:** ${date}${timeText}\n• **Nota:** ${note}`;
 
     try {
-      await fetch(DISCORD_WEBHOOK_URL, {
+      // Aggiungiamo ?wait=true per ricevere indietro l'ID del messaggio creato
+      const response = await fetch(`${DISCORD_WEBHOOK_URL}?wait=true`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: message
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: message })
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.id; // Restituisce l'ID del messaggio Discord
+      }
     } catch (err) {
       console.error("Errore nell'invio della notifica a Discord:", err);
     }
+    return null;
   }
 
   document.getElementById('btnAddAgenda')?.addEventListener('click', async () => {
@@ -1683,10 +1697,11 @@
         operator: operator,
         completed: false,
         createdAt: new Date().toISOString()
+        discordMessageId: discordMsgId || null
       });
 
       // 2. 🚀 Invia la notifica su Discord
-      await sendDiscordNotification(operator, dateVal, timeVal, noteVal);
+      const discordMsgId = await sendDiscordNotification(operator, dateVal, timeVal, noteVal);
 
       document.getElementById('agendaDate').value = '';
       document.getElementById('agendaTime').value = '';
