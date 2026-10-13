@@ -614,6 +614,16 @@
 </div>
 
 <script type="module">
+// Funzione per convertire la data da AAAA-MM-GG a GG-MM-AAAA
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  }
+
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch, query, where, getDocs } 
     from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -2069,7 +2079,7 @@
       filtered.forEach(item => {
         const q = item.qty || 1;
         tbody.innerHTML += `<tr>
-          <td>${item.date} ${item.time}</td>
+          <td>${formatDate(item.date)} ${item.time}</td>
           <td>${item.operator}</td>
           <td>${getBadge(item.category)}</td>
           <td>${q > 0 ? '+' + q : q}</td>
@@ -2129,9 +2139,9 @@
     }
 
     filtered.forEach(item => {
-      const q = item.qty || 1;
-      tbody.innerHTML += `<tr>
-        <td>${item.date || ''} ${item.time || ''}</td>
+  const q = item.qty || 1;
+  tbody.innerHTML += `<tr>
+    <td>${formatDate(item.date) || ''} ${item.time || ''}</td>
         <td>${item.operator || ''}</td>
         <td>${getBadge(item.category)}</td>
         <td>${q > 0 ? '+' + q : q}</td>
@@ -2187,7 +2197,7 @@
            <button class="btn-delete" onclick="deleteAgendaItem('${item.id}')">Elimina</button>`;
 
       tbody.innerHTML += `<tr>
-        <td><strong>${item.date}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
+        <td><strong>${formatDate(item.date)}</strong> ${item.time ? 'alle ' + item.time : ''}</td>
         <td>${badgeHtml}</td>
         <td ${noteStyle}>${item.note}</td>
         <td>${item.operator}</td>
