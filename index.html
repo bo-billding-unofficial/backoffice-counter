@@ -1476,13 +1476,28 @@
     }
   };
 
-  // Marca una task come completata nel database
+  // Marca una task come completata nel database e notifica Discord con testo barrato
   window.completeAgendaItem = async function(id) {
     try {
+      // Recupera i dati della task corrente prima di aggiornarla (per prendere nota e operatore)
+      const targetItem = allAgenda.find(item => item.id === id);
+
       await updateDoc(doc(db, "agenda", id), {
         completed: true,
         completedAt: new Date().toISOString()
       });
+
+      // Se troviamo la task, inviamo la notifica di completamento su Discord
+      if (targetItem && DISCORD_WEBHOOK_URL) {
+        const timeText = targetItem.time ? ` alle ore ${targetItem.time}` : '';
+        const completedMessage = `✅ **Task Completata - Billding**\n• **Inserito da:** ${targetItem.operator}\n• **Data:** ${targetItem.date}${timeText}\n• **Nota:** ~~${targetItem.note}~~`;
+
+        await fetch(DISCORD_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: completedMessage })
+        });
+      }
     } catch (err) {
       console.error(err);
       alert("Errore durante il completamento del promemoria.");
@@ -1614,6 +1629,30 @@
     if (qtyInput) qtyInput.value = '';
   });
 
+  // --- INVIOTEST NOTIFICA DISCORD ---
+  const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1559462029969072128/7vV216OJ3pXM1VoAPH6xEErAEjfrUSs1rTOPgP2J0EnB6LwYPC2Ys48F0yvbEo_hUqm-";
+
+  async function sendDiscordNotification(operator, date, time, note) {
+    if (!DISCORD_WEBHOOK_URL) return;
+
+    const timeText = time ? ` alle ore ${time}` : '';
+    const message = `🔔 **Nuovo Promemoria Agenda - Billding**\n• **Inserito da:** ${operator}\n• **Data:** ${date}${timeText}\n• **Nota:** ${note}`;
+
+    try {
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: message
+        })
+      });
+    } catch (err) {
+      console.error("Errore nell'invio della notifica a Discord:", err);
+    }
+  }
+
   document.getElementById('btnAddAgenda')?.addEventListener('click', async () => {
     const dateVal = document.getElementById('agendaDate')?.value;
     const timeVal = document.getElementById('agendaTime')?.value;
@@ -1626,6 +1665,7 @@
     }
 
     try {
+      // 1. Salva su Firebase
       await addDoc(agendaRef, {
         date: dateVal,
         time: timeVal || '',
@@ -1635,10 +1675,13 @@
         createdAt: new Date().toISOString()
       });
 
+      // 2. 🚀 Invia la notifica su Discord
+      await sendDiscordNotification(operator, dateVal, timeVal, noteVal);
+
       document.getElementById('agendaDate').value = '';
       document.getElementById('agendaTime').value = '';
       document.getElementById('agendaNote').value = '';
-      alert("Promemoria salvato in agenda!");
+      alert("Promemoria salvato e notificato su Discord con successo!");
     } catch (err) {
       console.error(err);
       alert("Errore durante il salvataggio in agenda.");
